@@ -1,88 +1,119 @@
 ---
-title: User Action Processing Flow
+title: Processing User Actions and Applying Operations
 ---
-This document outlines the main flow for handling user-initiated actions in the photo editor. When a user selects a command or uses a tool, the system prepares for processing, routes the action to the correct handler, and may prompt for additional input if needed. The requested operation is executed, undo/redo state and UI are updated, and the user receives feedback or results. The flow supports both interactive and automated scenarios, including macro recording and batch processing.
+This document explains how user actions—such as menu commands, adjustments, or tool operations—are processed and applied to images, layers, or selections. The flow supports interactive dialogs, direct processing, macro recording, and batch workflows, while maintaining undo/redo history and updating the UI.
 
-# Processing and Pre-Action State Management
+```mermaid
+flowchart TD
+  node1["Managing Processing State, Undo, and Selection Handling"]:::HeadingStyle
+  click node1 goToHeading "Managing Processing State, Undo, and Selection Handling"
+  node1 --> node2{"What type of action?"}
+  node2 -->|"File"| node3["Dispatching File Menu Actions and Dialogs"]:::HeadingStyle
+  click node3 goToHeading "Dispatching File Menu Actions and Dialogs"
+  node2 -->|"Edit"| node4["Handling Undo, Redo, and Clipboard Operations"]:::HeadingStyle
+  click node4 goToHeading "Handling Undo, Redo, and Clipboard Operations"
+  node2 -->|"Image"| node5["Dispatching Image Processing and Dialog Actions"]:::HeadingStyle
+  click node5 goToHeading "Dispatching Image Processing and Dialog Actions"
+  node2 -->|"Layer"| node6["Dispatching Layer Operations"]:::HeadingStyle
+  click node6 goToHeading "Dispatching Layer Operations"
+  node2 -->|"Select"| node7["Routing Selection Operations"]:::HeadingStyle
+  click node7 goToHeading "Routing Selection Operations"
+  node2 -->|"Adjustments"| node8["Dispatching Image Adjustments"]:::HeadingStyle
+  click node8 goToHeading "Dispatching Image Adjustments"
+  node2 -->|"Effects"| node9["Dispatching Effects and Filters"]:::HeadingStyle
+  click node9 goToHeading "Dispatching Effects and Filters"
+  node2 -->|"Tools/Other"| node10["Routing Tools Menu Actions"]:::HeadingStyle
+  click node10 goToHeading "Routing Tools Menu Actions"
+  node3 --> node11["Finalizing Undo/Redo State"]:::HeadingStyle
+  click node11 goToHeading "Finalizing Undo/Redo State"
+  node4 --> node11
+  node5 --> node11
+  node6 --> node11
+  node7 --> node11
+  node8 --> node11
+  node9 --> node11
+  node10 --> node11
+  node11 --> node12["Final UI and State Cleanup"]:::HeadingStyle
+  click node12 goToHeading "Final UI and State Cleanup"
+classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
+```
+
+# Managing Processing State, Undo, and Selection Handling
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-  node1["Start processing user action"]
-  click node1 openCode "Modules/Processor.bas:89:142"
-  node1 --> node2{"Is this a repeat of last action?"}
-  click node2 openCode "Modules/Processor.bas:129:139"
-  node2 -->|"Yes"| node3["Restore last action parameters"]
-  click node3 openCode "Modules/Processor.bas:130:138"
-  node2 -->|"No"| node4["Prepare for processing (UI, parameters, pre-processing)"]
-  click node4 openCode "Modules/Processor.bas:142:151"
-  node3 --> node4
-  node4 --> node5{"Does action require rasterization?"}
-  click node5 openCode "Modules/Processor.bas:153:158"
-  node5 -->|"User cancels"| node15["Cancel and restore UI"]
-  click node15 openCode "Modules/Processor.bas:159:161"
-  node5 -->|"No or user agrees"| node6{"Does action require selection removal?"}
-  node6 -->|"Yes"| node7["Remove selection"]
-  click node7 openCode "Modules/Processor.bas:172:172"
-  node6 -->|"No"| node8["Notify macro recorder"]
-  click node8 openCode "Modules/Processor.bas:176:176"
-  node7 --> node8
-  node8 --> node9["File Menu Command Dispatch and Dialog Handling"]
-  
-  node9 -->|"Found"| node10{"Special case: exit program?"}
-  click node10 openCode "Modules/Processor.bas:224:236"
-  node10 -->|"Yes"| node11["Exit application"]
-  click node11 openCode "Modules/Processor.bas:226:233"
-  node10 -->|"No"| node12["Undo/Redo Finalization and Cancellation Handling"]
-  
-  node9 -->|"Not found"| node13["Edit Menu Command Dispatch and Clipboard Handling"]
-  
-  node13 -->|"Found"| node12
-  node13 -->|"Not found"| node14["Image Menu Command Dispatch and Dialog Routing"]
-  
-  node14 -->|"Found"| node12
-  node14 -->|"Not found"| node16["Layer Command Dispatch and Execution"]
-  
-  node16 -->|"Found"| node12
-  node16 -->|"Not found"| node17["Try Select Menu handler"]
-  click node17 openCode "Modules/Processor.bas:250:251"
-  node17 -->|"Found"| node12
-  node17 -->|"Not found"| node18["Adjustment Command Dispatch and Execution"]
-  
-  node18 -->|"Found"| node12
-  node18 -->|"Not found"| node19["Effect Dispatch and Dialog Routing"]
-  
-  node19 -->|"Found"| node12
-  node19 -->|"Not found"| node20["Try Tools Menu handler"]
-  click node20 openCode "Modules/Processor.bas:259:320"
-  node20 -->|"Found"| node12
-  node20 -->|"Not found"| node21["Show error: unknown action"]
-  click node21 openCode "Modules/Processor.bas:323:327"
-  node12 --> node22["Finish processing"]
-  click node22 openCode "Modules/Processor.bas:391:398"
-  node11 --> node22
+    node1["Start processing user action"]
+    click node1 openCode "Modules/Processor.bas:89:142"
+    node1 --> node2{"Repeat last action?"}
+    click node2 openCode "Modules/Processor.bas:129:139"
+    node2 -->|"Yes"| node3["Load last action parameters"]
+    click node3 openCode "Modules/Processor.bas:130:139"
+    node2 -->|"No"| node4["Prepare for processing (UI, parameters, pre-processing)"]
+    click node4 openCode "Modules/Processor.bas:142:151"
+    node3 --> node4
+    node4 --> node5{"Pre-processing needed?"}
+    click node5 openCode "Modules/Processor.bas:153:158"
+    node5 -->|"Yes"| node6["Perform pre-processing (rasterize, remove selection)"]
+    click node6 openCode "Modules/Processor.bas:158:172"
+    node5 -->|"No"| node7["Proceed to menu handling"]
+    click node7 openCode "Modules/Processor.bas:174:215"
+    node6 --> node7
+    node7 --> node8{"Which menu handles the action?"}
+    click node8 openCode "Modules/Processor.bas:215:259"
+    node8 -->|"File"| node9["Dispatching File Menu Actions and Dialogs"]
+    
+    node8 -->|"Edit"| node10["Handling Undo, Redo, and Clipboard Operations"]
+    
+    node8 -->|"Image"| node11["Dispatching Image Processing and Dialog Actions"]
+    
+    node8 -->|"Layer"| node12["Dispatching Layer Operations"]
+    
+    node8 -->|"Select"| node13["Routing Selection Operations"]
+    
+    node8 -->|"Adjustments"| node14["Dispatching Image Adjustments"]
+    
+    node8 -->|"Effects"| node15["Dispatching Effects and Filters"]
+    
+    node8 -->|"Tools/Other"| node16["Routing Tools Menu Actions"]
+    
+    node9 --> node17["Finalizing Undo/Redo State"]
+    
+    node10 --> node17
+    node11 --> node17
+    node12 --> node17
+    node13 --> node17
+    node14 --> node17
+    node15 --> node17
+    node16 --> node17
+    node17 --> node18["End processing"]
+    click node18 openCode "Modules/Processor.bas:390:398"
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
-click node9 goToHeading "File Menu Command Dispatch and Dialog Handling"
+click node9 goToHeading "Dispatching File Menu Actions and Dialogs"
 node9:::HeadingStyle
-click node13 goToHeading "Edit Menu Command Dispatch and Clipboard Handling"
-node13:::HeadingStyle
-click node14 goToHeading "Image Menu Command Dispatch and Dialog Routing"
-node14:::HeadingStyle
-click node16 goToHeading "Layer Command Dispatch and Execution"
-node16:::HeadingStyle
-click node18 goToHeading "Adjustment Command Dispatch and Execution"
-node18:::HeadingStyle
-click node19 goToHeading "Effect Dispatch and Dialog Routing"
-node19:::HeadingStyle
-click node12 goToHeading "Undo/Redo Finalization and Cancellation Handling"
+click node10 goToHeading "Handling Undo, Redo, and Clipboard Operations"
+node10:::HeadingStyle
+click node11 goToHeading "Dispatching Image Processing and Dialog Actions"
+node11:::HeadingStyle
+click node12 goToHeading "Dispatching Layer Operations"
 node12:::HeadingStyle
+click node13 goToHeading "Routing Selection Operations"
+node13:::HeadingStyle
+click node14 goToHeading "Dispatching Image Adjustments"
+node14:::HeadingStyle
+click node15 goToHeading "Dispatching Effects and Filters"
+node15:::HeadingStyle
+click node16 goToHeading "Routing Tools Menu Actions"
+node16:::HeadingStyle
+click node17 goToHeading "Finalizing Undo/Redo State"
+node17:::HeadingStyle
 ```
 
 <SwmSnippet path="/Modules/Processor.bas" line="89">
 
 ---
 
-In `Process`, we start by prepping error handling and logging, then immediately call SetProcessorUI_Busy to lock the UI and prevent user interaction during processing.
+In `Process`, we kick off the processing flow, increment the nested processing counter, and cache the focused window if needed. Next, we call SetProcessorUI_Busy to lock down the UI and prevent user interaction while processing is underway.
 
 ```visual basic
 Public Sub Process(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True)
@@ -150,7 +181,7 @@ Public Sub Process(ByVal processID As String, Optional raiseDialog As Boolean = 
 
 ---
 
-`SetProcessorUI_Busy` sets up the UI to show it's busy, including the cursor and internal flags, but only if we're actually processing and not just showing a dialog.
+SetProcessorUI_Busy figures out if we need a busy cursor, sets the processing flag, and calls MarkProgramBusyState to update the UI and suspend painting if we're not just showing a dialog.
 
 ```visual basic
 Private Sub SetProcessorUI_Busy(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True)
@@ -181,7 +212,7 @@ End Sub
 
 ---
 
-Back in `Process`, after locking the UI, we call Processor_BeforeStarting to handle quirks like Crop, making sure undo/redo works correctly by prepping the undo stack if needed.
+Back in Process, after locking the UI, we prep a parameter parser and call Processor_BeforeStarting to handle any quirks (like Crop) before the main processing kicks in.
 
 ```visual basic
     'Create a parameter parser to handle the parameter string.  This can parse out individual function parameters as specific
@@ -203,7 +234,7 @@ Back in `Process`, after locking the UI, we call Processor_BeforeStarting to han
 
 ---
 
-`Processor_BeforeStarting` checks if we're about to Crop and, if so, forces the undo manager to save both image and selection state before the crop happens, but only if we're not raising a dialog and not in batch mode.
+Processor_BeforeStarting checks for Crop actions and, if needed, forces the undo manager to save both image and selection state before cropping, so undo/redo doesn't break.
 
 ```visual basic
 Public Sub Processor_BeforeStarting(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True)
@@ -244,7 +275,7 @@ End Sub
 
 ---
 
-Back in `Process`, after prepping undo/redo, we check if the action needs rasterizing vector layers. If the user cancels, we exit early to avoid destructive changes.
+After handling pre-processing quirks, Process checks if rasterization is needed for vector layers. If the user cancels, we bail out early; otherwise, we keep going. This step also sets up later selection removal and macro/batch handling.
 
 ```visual basic
     'Next, we need to check for actions that may require us to rasterize one or more vector layers before proceeding.
@@ -263,7 +294,7 @@ Back in `Process`, after prepping undo/redo, we check if the action needs raster
 
 ---
 
-`CheckRasterizeRequirements` checks if the current action will destroy vector data and, if so, prompts the user to rasterize. It handles exceptions for merges and non-destructive crops, and cancels the action if the user says no.
+CheckRasterizeRequirements checks if the action needs rasterizing vector layers, prompts the user if required, handles merge/crop exceptions, and bails if the user cancels. Otherwise, it rasterizes only what's needed.
 
 ```visual basic
 Private Function CheckRasterizeRequirements(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing) As Boolean
@@ -421,7 +452,7 @@ End Function
 
 ---
 
-Back in `Process`, if rasterization was cancelled, we call SetProcessorUI_Idle to unlock the UI and restore focus, then exit early.
+After rasterization checks, if the user cancels, we call SetProcessorUI_Idle to unlock the UI, decrement the processing count, and restore focus before exiting.
 
 ```visual basic
         SetProcessorUI_Idle processID, raiseDialog, processParameters, createUndo, relevantTool, recordAction
@@ -438,7 +469,7 @@ Back in `Process`, if rasterization was cancelled, we call SetProcessorUI_Idle t
 
 ---
 
-`SetProcessorUI_Idle` unlocks the UI, updates the nested counter, and restores focus if needed.
+SetProcessorUI_Idle clears the processing flag, decrements the nested count, and restores focus if we're done with all nested operations.
 
 ```visual basic
 Private Sub SetProcessorUI_Idle(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True)
@@ -464,7 +495,7 @@ End Sub
 
 ---
 
-Back in `Process`, after restoring the UI, we check if the current action needs the selection removed in advance (like resizing or rotating), and trigger removal if needed to keep things in sync.
+After unlocking the UI, Process checks if the action needs to remove the selection (like resizing or rotating), so selection masks don't get out of sync and break undo/redo.
 
 ```visual basic
     'If a selection is active, certain functions (primarily transformations) will remove it before proceeding.
@@ -488,7 +519,7 @@ Back in `Process`, after restoring the UI, we check if the current action needs 
 
 ---
 
-`RemoveSelectionAsNecessary` checks if a selection is active and if the action is one that changes image geometry. If so, it calls Processor.Process to remove the selection before proceeding.
+RemoveSelectionAsNecessary checks if there's an active selection and if the action is one that changes image geometry. If so, it removes the selection before proceeding.
 
 ```visual basic
 Private Function RemoveSelectionAsNecessary(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing) As Boolean
@@ -544,7 +575,7 @@ End Function
 
 ---
 
-Back in `Process`, after prepping selection state, we notify the macro recorder and prep undo/redo. Before dispatching the main action, we check for unsaved canvas changes and create undo entries if needed.
+After handling selection, Process notifies the macro recorder, disables undo for dialogs, and checks if undo data needs to be created. It also checks for unsaved canvas modifications to keep undo/redo and macro recording in sync.
 
 ```visual basic
     'If we made it all the way here, notify the macro recorder that something interesting has happened.
@@ -584,7 +615,7 @@ Back in `Process`, after prepping selection state, we notify the macro recorder 
 
 ---
 
-`CheckForCanvasModifications` checks if the selection has changed since the last undo entry by comparing XML strings. If it has, it creates a new undo entry for the selection modification.
+CheckForCanvasModifications compares the last undo selection XML with the current one, and if they've changed, it creates a new undo entry for the selection.
 
 ```visual basic
 Private Sub CheckForCanvasModifications(ByVal createUndo As PD_UndoType)
@@ -645,7 +676,7 @@ End Sub
 
 ---
 
-Back in `Process`, after prepping undo/redo and macro state, we dispatch the processID to the right handler (like Process_FileMenu) or handle legacy/special cases directly. This centralizes all action routing.
+After canvas checks, Process starts routing the action by checking processID against menu categories, starting with Process_FileMenu. If it matches, we call the relevant handler.
 
 ```visual basic
     '******************************************************************************************************************
@@ -672,60 +703,61 @@ Back in `Process`, after prepping undo/redo and macro state, we dispatch the pro
 
 </SwmSnippet>
 
-## File Menu Command Dispatch and Dialog Handling
+## Dispatching File Menu Actions and Dialogs
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
     node1["User selects a File menu command"]
-    click node1 openCode "Modules/Processor.bas:1358:1467"
+    click node1 openCode "Modules/Processor.bas:1358:1466"
     node1 --> node2{"Which command?"}
     click node2 openCode "Modules/Processor.bas:1360:1465"
     node2 -->|"New image"| node3{"Show dialog?"}
-    click node3 openCode "Modules/Processor.bas:1361:1362"
+    click node3 openCode "Modules/Processor.bas:1361:1361"
     node3 -->|"Yes"| node4["Show New Image dialog"]
-    click node4 openCode "Modules/Interface.bas:993:1095"
+    click node4 openCode "Modules/Processor.bas:1361:1361"
     node3 -->|"No"| node5["Create new image"]
-    click node5 openCode "Modules/Processor.bas:1361:1362"
+    click node5 openCode "Modules/Processor.bas:1361:1361"
     node2 -->|"Open"| node6["Open image"]
-    click node6 openCode "Modules/Processor.bas:1364:1366"
+    click node6 openCode "Modules/Processor.bas:1365:1365"
     node2 -->|"Close"| node7["Close image"]
-    click node7 openCode "Modules/Processor.bas:1368:1370"
-    node2 -->|"Close all"| node8["Close all images"]
-    click node8 openCode "Modules/Processor.bas:1372:1374"
-    node2 -->|"Save/Save as/Save copy"| node9["Save image"]
-    click node9 openCode "Modules/Processor.bas:1376:1386"
+    click node7 openCode "Modules/Processor.bas:1369:1369"
+    node2 -->|"Save/Save as/Save copy"| node8["Save image (various modes)"]
+    click node8 openCode "Modules/Processor.bas:1377:1386"
+    node2 -->|"Export (image/layers/animation/color lookup/profile/palette)"| node9["Export image data"]
+    click node9 openCode "Modules/Processor.bas:1396:1423"
     node2 -->|"Revert"| node10{"Is revert enabled?"}
-    click node10 openCode "Modules/Processor.bas:1388:1393"
+    click node10 openCode "Modules/Processor.bas:1389:1392"
     node10 -->|"Yes"| node11["Revert to last saved state"]
-    click node11 openCode "Modules/Processor.bas:1389:1391"
-    node10 -->|"No"| node25["Operation completed"]
-    node2 -->|"Export"| node13["Export image/layers/animation/color lookup/profile/palette"]
-    click node13 openCode "Modules/Processor.bas:1395:1423"
-    node2 -->|"Batch wizard"| node14["Show batch wizard dialog"]
-    click node14 openCode "Modules/Processor.bas:1425:1427"
-    node2 -->|"Print"| node15{"Show dialog?"}
-    click node15 openCode "Modules/Processor.bas:1430:1441"
-    node15 -->|"Yes"| node16["Show print dialog"]
-    click node16 openCode "Modules/Interface.bas:993:1095"
-    node15 -->|"No"| node17["Print image"]
-    click node17 openCode "Modules/Processor.bas:1435:1436"
-    node2 -->|"Exit program"| node18["Signal program exit"]
-    click node18 openCode "Modules/Processor.bas:1444:1447"
-    node2 -->|"Scanner/camera"| node19["Select scanner/camera or scan image"]
-    click node19 openCode "Modules/Processor.bas:1449:1455"
+    click node11 openCode "Modules/Processor.bas:1390:1391"
+    node10 -->|"No"| node12["No action"]
+    click node12 openCode "Modules/Processor.bas:1392:1392"
+    node2 -->|"Batch wizard"| node13["Show Batch Wizard dialog"]
+    click node13 openCode "Modules/Processor.bas:1426:1426"
+    node2 -->|"Print"| node14{"Show dialog?"}
+    click node14 openCode "Modules/Processor.bas:1430:1438"
+    node14 -->|"Yes"| node15["Show Print dialog"]
+    click node15 openCode "Modules/Processor.bas:1437:1438"
+    node14 -->|"No"| node16["Print image"]
+    click node16 openCode "Modules/Processor.bas:1435:1436"
+    node2 -->|"Exit program"| node17["Trigger program exit"]
+    click node17 openCode "Modules/Processor.bas:1446:1447"
+    node2 -->|"Select scanner/camera"| node18["Select scanner/camera"]
+    click node18 openCode "Modules/Processor.bas:1450:1450"
+    node2 -->|"Scan image"| node19["Scan image"]
+    click node19 openCode "Modules/Processor.bas:1454:1454"
     node2 -->|"Screen capture"| node20{"Show dialog?"}
-    click node20 openCode "Modules/Processor.bas:1458:1459"
-    node20 -->|"Yes"| node21["Show screen capture dialog"]
-    click node21 openCode "Modules/Interface.bas:993:1095"
+    click node20 openCode "Modules/Processor.bas:1458:1458"
+    node20 -->|"Yes"| node21["Show Screen Capture dialog"]
+    click node21 openCode "Modules/Processor.bas:1458:1458"
     node20 -->|"No"| node22["Capture screen"]
-    click node22 openCode "Modules/Processor.bas:1459:1459"
+    click node22 openCode "Modules/Processor.bas:1458:1458"
     node2 -->|"Internet import"| node23{"Show dialog?"}
-    click node23 openCode "Modules/Processor.bas:1461:1462"
-    node23 -->|"Yes"| node24["Show internet import dialog"]
-    click node24 openCode "Modules/Interface.bas:993:1095"
-    node2 --> node25["Operation completed"]
-    click node25 openCode "Modules/Processor.bas:1362:1467"
+    click node23 openCode "Modules/Processor.bas:1462:1462"
+    node23 -->|"Yes"| node24["Show Internet Import dialog"]
+    click node24 openCode "Modules/Processor.bas:1462:1462"
+    node23 -->|"No"| node25["Import from internet"]
+    click node25 openCode "Modules/Processor.bas:1462:1462"
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
@@ -734,7 +766,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In `Process_FileMenu`, we match the processID to known file commands. For commands needing user input, we show a dialog (handled by ShowPDDialog); otherwise, we run the action directly. The function returns True if it handled the command.
+In Process_FileMenu, we check processID against known file commands and either show a dialog (if raiseDialog is True) or call the relevant module directly. This keeps file menu actions and dialogs organized.
 
 ```visual basic
 Private Function Process_FileMenu(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -793,7 +825,7 @@ Private Function Process_FileMenu(ByVal processID As String, Optional raiseDialo
 
 ---
 
-`ShowPDDialog` loads the dialog, sets ownership (main form or previous dialog), positions it (centered or using saved position), mirrors window icons for consistency, and restores everything after the dialog closes.
+ShowPDDialog handles dialog stacking, centers dialogs relative to the main window, mirrors icons for Alt+Tab, and restores everything after the dialog closes.
 
 ```visual basic
 Public Sub ShowPDDialog(ByRef dialogModality As FormShowConstants, ByRef dialogForm As Form, Optional ByVal doNotUnload As Boolean = False)
@@ -919,7 +951,7 @@ End Sub
 
 ---
 
-After returning from `ShowPDDialog`, `Process_FileMenu` finishes up by handling any remaining commands, including special cases like exit (using returnDetails), and returns True if it processed something.
+Back in Process_FileMenu, after handling dialogs, we dispatch commands to their modules and set return values. For 'Exit program', we just signal the main process to exit.
 
 ```visual basic
                 'There is no else; the above dialog handles everything!
@@ -992,24 +1024,23 @@ End Function
 
 </SwmSnippet>
 
-## Edit Menu Command Routing
+## Routing Edit Menu Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1{"Was a menu operation matched?"}
+    node1{"Was a special menu operation found?"}
     click node1 openCode "Modules/Processor.bas:221:238"
     node1 -->|"Yes"| node2{"Is the operation 'exit program'?"}
     click node2 openCode "Modules/Processor.bas:224:236"
-    node2 -->|"Yes"| node3{"Did user confirm exit?"}
-    click node3 openCode "Modules/Processor.bas:231:234"
-    node3 -->|"Yes"| node4["Exit PhotoDemon immediately and stop further processing"]
-    click node4 openCode "Modules/Processor.bas:226:233"
-    node3 -->|"No"| node8["Continue normal processing"]
-    click node8 openCode "Modules/Processor.bas:234:236"
-    node2 -->|"No"| node8
-    node1 -->|"No"| node5["Process Edit Menu operations"]
+    node1 -->|"No"| node5["Process edit menu actions"]
     click node5 openCode "Modules/Processor.bas:241:241"
+    node2 -->|"Yes"| node3{"Is the program shutting down?"}
+    click node3 openCode "Modules/Processor.bas:231:234"
+    node2 -->|"No"| node5
+    node3 -->|"Yes"| node4["Exit function immediately and end"]
+    click node4 openCode "Modules/Processor.bas:232:233"
+    node3 -->|"No"| node5
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -1017,7 +1048,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-Back in `Process`, after FileMenu, we check if the command was handled. If not, we pass it to Process_EditMenu to see if it's an edit command.
+After FileMenu, Process checks if the action was handled. If not, we move on to Process_EditMenu to see if it's an edit command.
 
 ```visual basic
     'The File menu contains some abnormal operations (e.g. "exit program") which require us to deal with their return
@@ -1050,29 +1081,49 @@ Back in `Process`, after FileMenu, we check if the command was handled. If not, 
 
 </SwmSnippet>
 
-## Edit Menu Command Dispatch and Clipboard Handling
+## Handling Undo, Redo, and Clipboard Operations
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects an Edit menu action (processID)"] --> node2{"What type of action?"}
+    node1["Receive Edit menu action request"] --> node2{"Which Edit menu action?"}
     click node1 openCode "Modules/Processor.bas:1472:1478"
-    node2 -->|"Undo/Redo/Undo history"| node3["Restore or move to previous image state"]
-    click node2 openCode "Modules/Processor.bas:1478:1513"
-    node2 -->|"Fade"| node4["Apply fade to last action"]
-    click node4 openCode "Modules/Processor.bas:1514:1517"
-    node2 -->|"Clipboard operation (Cut, Copy, Paste, etc.)"| node5["Perform clipboard operation (may show dialog)"]
-    click node5 openCode "Modules/Processor.bas:1518:1586"
-    node2 -->|"Selection operation (Clear, Fill, Stroke, etc.)"| node6["Perform selection operation (may show dialog)"]
-    click node6 openCode "Modules/Processor.bas:1588:1603"
-    node3 --> node7{"Was Undo/Redo used?"}
-    click node7 openCode "Modules/Processor.bas:1606:1612"
-    node7 -->|"Yes"| node8["Sync layer properties to active layer"]
-    click node8 openCode "Modules/Processor.bas:1609:1611"
-    node7 -->|"No"| node9["End"]
-    node4 --> node9
-    node5 --> node9
-    node6 --> node9
+    node2 -->|"Undo/Redo"| node3["Restore Undo/Redo data and update image"]
+    click node2 openCode "Modules/Processor.bas:1478:1492"
+    click node3 openCode "Modules/Processor.bas:1482:1492"
+    node2 -->|"Clipboard (Cut/Copy/Copy merged/Cut merged)"| node4["Perform clipboard cut/copy"]
+    click node4 openCode "Modules/Processor.bas:1518:1532"
+    node2 -->|"Paste"| node5{"Is image active?"}
+    click node5 openCode "Modules/Processor.bas:1538:1547"
+    node5 -->|"Yes"| node6["Paste into active image"]
+    click node6 openCode "Modules/Processor.bas:1544:1548"
+    node5 -->|"No"| node7["Paste as new image"]
+    click node7 openCode "Modules/Processor.bas:1556:1558"
+    node2 -->|"Paste to cursor"| node8["Paste at cursor position"]
+    click node8 openCode "Modules/Processor.bas:1552:1555"
+    node2 -->|"Special clipboard (Cut/Copy/Paste special)"| node9{"Raise dialog?"}
+    click node9 openCode "Modules/Processor.bas:1560:1583"
+    node9 -->|"Yes"| node10["Show special clipboard dialog"]
+    click node10 openCode "Modules/Processor.bas:1562:1571"
+    node9 -->|"No"| node11["Perform special clipboard operation"]
+    click node11 openCode "Modules/Processor.bas:1564:1573"
+    node2 -->|"Selection (Clear/Fill/Stroke/Content-aware fill)"| node12["Perform selection operation"]
+    click node12 openCode "Modules/Processor.bas:1588:1603"
+    node2 -->|"Other"| node16["Perform other Edit menu action"]
+    click node16 openCode "Modules/Processor.bas:1472:1614"
+    node3 --> node13{"Was Undo/Redo performed?"}
+    click node13 openCode "Modules/Processor.bas:1606:1612"
+    node13 -->|"Yes"| node14["Sync layer properties"]
+    click node14 openCode "Modules/Processor.bas:1609:1611"
+    node13 -->|"No"| node15["Finish"]
+    node4 --> node15
+    node6 --> node15
+    node7 --> node15
+    node8 --> node15
+    node10 --> node15
+    node11 --> node15
+    node12 --> node15
+    node16 --> node15
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -1080,7 +1131,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In `Process_EditMenu`, we match the processID to edit commands like undo/redo and clipboard ops. For some, we show dialogs (handled by ShowPDDialog); for others, we run the action and sync the UI and layer settings.
+In Process_EditMenu, we handle undo/redo, notify the UI and viewport, and dispatch clipboard ops. Dialogs are shown for history or fade if needed.
 
 ```visual basic
 Private Function Process_EditMenu(ByRef processID As String, Optional ByVal raiseDialog As Boolean = False, Optional ByRef processParameters As String = vbNullString, Optional ByRef createUndo As PD_UndoType = UNDO_Nothing, Optional ByRef relevantTool As Long = -1, Optional ByRef recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -1155,7 +1206,7 @@ Private Function Process_EditMenu(ByRef processID As String, Optional ByVal rais
 
 ---
 
-After returning from dialog handling, `Process_EditMenu` wraps up by handling special clipboard and selection commands, and syncs layer properties if undo/redo was used.
+Back in Process_EditMenu, we handle special clipboard and selection filter ops, show dialogs if needed, and sync layer settings after undo/redo.
 
 ```visual basic
     'Note the active image check; if no images are loaded, "Paste" gets silently rerouted to
@@ -1245,13 +1296,13 @@ End Function
 
 </SwmSnippet>
 
-## Image Menu Command Routing
+## Routing Image Menu Actions
 
 <SwmSnippet path="/Modules/Processor.bas" line="243">
 
 ---
 
-Back in `Process`, after EditMenu, we check if the command was handled. If not, we pass it to Process_ImageMenu to see if it's an image command.
+After EditMenu, Process checks if the action was handled. If not, we call Process_ImageMenu to handle image processing commands.
 
 ```visual basic
     'Image menu operations have been successfully migrated to XML strings.  (None of their functions raise special return conditions, FYI.)
@@ -1263,51 +1314,31 @@ Back in `Process`, after EditMenu, we check if the command was handled. If not, 
 
 </SwmSnippet>
 
-## Image Menu Command Dispatch and Dialog Routing
+## Dispatching Image Processing and Dialog Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects an image menu action"]
+    node1["User requests an image menu action"] --> node2{"What type of action is requested? (processID)"}
     click node1 openCode "Modules/Processor.bas:2204:2335"
-    node1 --> node2{"Which action?"}
+    node2 -->|"Image transformation (resize, crop, rotate, flip, straighten, fit, trim, duplicate, merge, flatten)"| node3{"Does this action require user input? (raiseDialog)"}
     click node2 openCode "Modules/Processor.bas:2209:2332"
-    node2 -->|"Duplicate image"| node3["Duplicate the current image"]
-    click node3 openCode "Modules/Processor.bas:2210:2211"
-    node2 -->|"Resize/Content-aware/Canvas size"| node4{"Show dialog?"}
-    click node4 openCode "Modules/Processor.bas:2216:2225"
-    node4 -->|"Yes"| node5["Show relevant dialog"]
-    click node5 openCode "Modules/DialogManager.bas:324:333"
-    node4 -->|"No"| node6["Apply resize/canvas action directly"]
-    click node6 openCode "Modules/Processor.bas:2216:2225"
-    node2 -->|"Fit canvas/Crop/Trim/Straighten/Rotate/Flip"| node7{"Show dialog?"}
-    click node7 openCode "Modules/Processor.bas:2227:2271"
-    node7 -->|"Yes"| node8["Show relevant dialog"]
-    click node8 openCode "Modules/DialogManager.bas:336:345"
-    node7 -->|"No"| node9["Apply transformation directly"]
-    click node9 openCode "Modules/Processor.bas:2227:2271"
-    node2 -->|"Merge/Flatten layers"| node10{"Show dialog?"}
-    click node10 openCode "Modules/Processor.bas:2274:2287"
-    node10 -->|"Yes"| node11["Show flatten dialog if relevant"]
-    click node11 openCode "Modules/Processor.bas:2283:2284"
-    node10 -->|"No"| node12["Merge/flatten layers directly"]
-    click node12 openCode "Modules/Processor.bas:2275:2286"
-    node2 -->|"Animation/Color lookup/Compare"| node13{"Show dialog?"}
-    click node13 openCode "Modules/Processor.bas:2290:2301"
-    node13 -->|"Yes"| node14["Show relevant dialog"]
-    click node14 openCode "Modules/Processor.bas:2291:2296"
-    node13 -->|"No"| node15["Apply action directly"]
-    click node15 openCode "Modules/Processor.bas:2292:2301"
-    node2 -->|"Edit/Remove metadata"| node16{"Show dialog?"}
-    click node16 openCode "Modules/Processor.bas:2303:2311"
-    node16 -->|"Yes"| node17["Show metadata dialog"]
-    click node17 openCode "Modules/Processor.bas:2306:2307"
-    node16 -->|"No"| node18["Remove all metadata"]
-    click node18 openCode "Modules/Processor.bas:2310:2311"
-    node2 -->|"Count unique colors"| node19["Count unique colors"]
-    click node19 openCode "Modules/Processor.bas:2314:2315"
-    node2 -->|"Legacy/removed action"| node20["No operation (for compatibility)"]
-    click node20 openCode "Modules/Processor.bas:2317:2332"
+    node3 -->|"Yes"| node4["Show relevant dialog to user, then perform action"]
+    click node3 openCode "Modules/Processor.bas:2216:2327"
+    node3 -->|"No"| node5["Perform action directly"]
+    click node4 openCode "Modules/Processor.bas:2216:2327"
+    click node5 openCode "Modules/Processor.bas:2216:2327"
+    node2 -->|"Metadata or analysis (edit metadata, remove metadata, count colors, compare, color lookup)"| node6{"Does this action require user input? (raiseDialog)"}
+    click node6 openCode "Modules/Processor.bas:2303:2315"
+    node6 -->|"Yes"| node7["Show relevant dialog to user, then perform action"]
+    node6 -->|"No"| node8["Perform action directly"]
+    click node7 openCode "Modules/Processor.bas:2306:2307"
+    click node8 openCode "Modules/Processor.bas:2310:2315"
+    node2 -->|"Legacy or removed action (autocrop, isometric, tile)"| node9["No operation (for macro compatibility)"]
+    click node9 openCode "Modules/Processor.bas:2321:2332"
+    node2 -->|"Unrecognized action"| node10["No operation"]
+    click node10 openCode "Modules/Processor.bas:2333:2334"
+
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -1315,7 +1346,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In `Process_ImageMenu`, we match processID to image commands. For those needing user input, we call dialog functions (like ShowResizeDialog); for others, we run the action directly. Legacy commands are handled as no-ops.
+In Process_ImageMenu, we match processID to image commands, show dialogs if raiseDialog is True, or call the module directly. Legacy and removed commands are handled for macro compatibility.
 
 ```visual basic
 Private Function Process_ImageMenu(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -1344,7 +1375,7 @@ Private Function Process_ImageMenu(ByVal processID As String, Optional raiseDial
 
 ---
 
-`ShowResizeDialog` sets up the target for resizing, then calls ShowPDDialog to display the resize dialog modally.
+ShowResizeDialog sets the resize target and shows FormResize modally, so the user can resize the image without interference.
 
 ```visual basic
 Public Sub ShowResizeDialog(ByVal ResizeTarget As PD_ActionTarget)
@@ -1361,7 +1392,7 @@ End Sub
 
 ---
 
-Back in `Process_ImageMenu`, after handling resize, we use the same dialog manager pattern for content-aware resizing—show the dialog if needed, otherwise run the action directly.
+After resizing, Process_ImageMenu checks for content-aware resize and either shows the dialog or runs the operation directly.
 
 ```visual basic
         If raiseDialog Then ShowContentAwareResizeDialog pdat_Image Else FormResizeContentAware.SmartResizeImage processParameters
@@ -1378,7 +1409,7 @@ Back in `Process_ImageMenu`, after handling resize, we use the same dialog manag
 
 ---
 
-`ShowContentAwareResizeDialog` just sets the resize target and calls ShowPDDialog to show the dialog. That's it.
+ShowContentAwareResizeDialog sets the resize target and shows FormResizeContentAware modally for user input.
 
 ```visual basic
 Public Sub ShowContentAwareResizeDialog(ByVal ResizeTarget As PD_ActionTarget)
@@ -1395,7 +1426,7 @@ End Sub
 
 ---
 
-Back in `Process_ImageMenu`, for canvas size, we either show the dialog (ShowPDDialog) or run the resize directly, depending on raiseDialog.
+After content-aware resizing, Process_ImageMenu checks for canvas size changes and either shows the dialog or runs the operation directly.
 
 ```visual basic
         If raiseDialog Then ShowPDDialog vbModal, FormCanvasSize Else FormCanvasSize.ResizeCanvas processParameters
@@ -1419,7 +1450,7 @@ Back in `Process_ImageMenu`, for canvas size, we either show the dialog (ShowPDD
 
 ---
 
-Back in `Process_ImageMenu`, for crop and straighten, we call dialog manager functions to show dialogs if raiseDialog is True, or run the action directly otherwise.
+After canvas ops, Process_ImageMenu checks for straightening and either shows the dialog or runs the operation directly.
 
 ```visual basic
     'Crop operations.  Note that the main form submits "Crop" requests with raiseDialog set to TRUE.  This tells us to ask the
@@ -1459,7 +1490,7 @@ Back in `Process_ImageMenu`, for crop and straighten, we call dialog manager fun
 
 ---
 
-`ShowStraightenDialog` sets the target for straightening, then shows the dialog modally so the user has to interact before continuing.
+ShowStraightenDialog sets the straighten target and shows FormStraighten modally for user input.
 
 ```visual basic
 Public Sub ShowStraightenDialog(ByVal StraightenTarget As PD_ActionTarget)
@@ -1476,7 +1507,7 @@ End Sub
 
 ---
 
-Back in `Process_ImageMenu`, for rotation, we call dialog manager functions to show dialogs if raiseDialog is True, or run the action directly otherwise.
+After straightening, Process_ImageMenu checks for arbitrary rotation and either shows the dialog or runs the operation directly.
 
 ```visual basic
         If raiseDialog Then ShowRotateDialog pdat_Image Else FormRotate.RotateArbitrary processParameters
@@ -1500,7 +1531,7 @@ Back in `Process_ImageMenu`, for rotation, we call dialog manager functions to s
 
 ---
 
-`ShowRotateDialog` sets the target for rotation, then shows the dialog modally so the user has to interact before continuing.
+ShowRotateDialog sets the rotate target and shows FormRotate modally for user input.
 
 ```visual basic
 Public Sub ShowRotateDialog(ByVal RotateTarget As PD_ActionTarget)
@@ -1517,7 +1548,7 @@ End Sub
 
 ---
 
-Back in `Process_ImageMenu`, for flatten and animation options, we show dialogs if needed (ShowPDDialog) or run the action directly, depending on raiseDialog.
+After rotation, Process_ImageMenu checks for layer flattening and either shows the dialog or runs the operation directly.
 
 ```visual basic
     'Merge visible layers
@@ -1562,7 +1593,7 @@ Back in `Process_ImageMenu`, for flatten and animation options, we show dialogs 
 
 ---
 
-After returning from dialog handling, `Process_ImageMenu` wraps up by handling metadata, color counting, and legacy commands as no-ops to keep macro compatibility.
+Back in Process_ImageMenu, we finish dispatching image commands, show dialogs if needed, and handle legacy/removed commands for macro compatibility.
 
 ```visual basic
         'Note that there is no "Else" block here; the "Else" block does nothing but notify the processor to create an Undo entry
@@ -1602,13 +1633,13 @@ End Function
 
 </SwmSnippet>
 
-## Layer Menu Command Routing
+## Routing Layer Menu Actions
 
 <SwmSnippet path="/Modules/Processor.bas" line="246">
 
 ---
 
-Back in `Process`, after ImageMenu, we check if the command was handled. If not, we pass it to Process_LayerMenu to see if it's a layer command.
+After ImageMenu, Process checks if the action was handled. If not, we call Process_LayerMenu to handle layer processing commands.
 
 ```visual basic
     'Layer menu operations have been successfully migrated to XML strings.  (None of their functions raise special return conditions, FYI.)
@@ -1620,45 +1651,55 @@ Back in `Process`, after ImageMenu, we check if the command was handled. If not,
 
 </SwmSnippet>
 
-## Layer Command Dispatch and Execution
+## Dispatching Layer Operations
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Receive layer operation request"] --> node2{"What type of layer action?"}
-    click node1 openCode "Modules/Processor.bas:2340:2628"
-    node2 -->|"Add layer"| node3{"Is this a text layer and macro/batch is active?"}
-    node2 -->|"Remove layer"| node4["Remove the selected layer(s)"]
-    node2 -->|"Duplicate layer"| node5["Duplicate the selected layer"]
-    node2 -->|"Merge/move/transform layer"| node6{"Show dialog to user?"}
-    node2 -->|"Change visibility"| node7["Show or hide layers"]
-    node2 -->|"Resize/crop/alpha"| node8{"Show dialog to user?"}
-    node2 -->|"Split/rasterize/rearrange"| node9["Split, rasterize, or rearrange layers"]
-    click node2 openCode "Modules/Processor.bas:2348:2626"
-    node3 -->|"Yes"| node10["Create and initialize text layer from parameters"]
-    click node3 openCode "Modules/Processor.bas:2361:2382"
-    node3 -->|"No"| node11["Add a new blank or standard layer"]
-    click node11 openCode "Modules/Processor.bas:2349:2355"
-    node6 -->|"Yes"| node12["Show dialog for user input"]
-    node6 -->|"No"| node13["Perform action directly"]
-    node8 -->|"Yes"| node14["Show dialog for user input"]
-    node8 -->|"No"| node15["Perform action directly"]
-    node4 --> node16["Operation complete"]
-    click node4 openCode "Modules/Processor.bas:2405:2412"
-    node5 --> node16
-    click node5 openCode "Modules/Processor.bas:2388:2391"
-    node7 --> node16
-    click node7 openCode "Modules/Processor.bas:2476:2497"
-    node9 --> node16
-    click node9 openCode "Modules/Processor.bas:2581:2626"
-    node10 --> node16
-    click node10 openCode "Modules/Processor.bas:2363:2382"
-    node11 --> node16
-    node12 --> node16
-    node13 --> node16
-    node14 --> node16
-    node15 --> node16
-    click node16 openCode "Modules/Processor.bas:2351:2626"
+    node1["Receive layer operation request"] --> node2{"Requested operation (processID)?"}
+    click node1 openCode "Modules/Processor.bas:2340:2346"
+    node2 -->|"Add layer"| node3{"Dialog required?"}
+    click node2 openCode "Modules/Processor.bas:2349:2355"
+    node3 -->|"Yes"| node4["Show dialog for layer addition"]
+    click node3 openCode "Modules/Processor.bas:2354:2354"
+    node3 -->|"No"| node5["Add layer directly"]
+    click node5 openCode "Modules/Processor.bas:2350:2351"
+    node4 --> node12["Return success"]
+    node5 --> node12
+    node2 -->|"Delete layer"| node6["Remove layer from image"]
+    click node6 openCode "Modules/Processor.bas:2405:2407"
+    node6 --> node12
+    node2 -->|"Duplicate layer"| node7["Duplicate layer"]
+    click node7 openCode "Modules/Processor.bas:2388:2390"
+    node7 --> node12
+    node2 -->|"Merge layers"| node8["Merge layers"]
+    click node8 openCode "Modules/Processor.bas:2427:2434"
+    node8 --> node12
+    node2 -->|"Move/Arrange layer"| node9["Move or rearrange layer"]
+    click node9 openCode "Modules/Processor.bas:2453:2468"
+    node9 --> node12
+    node2 -->|"Resize/Transform layer"| node10["Resize or transform layer"]
+    click node10 openCode "Modules/Processor.bas:2555:2561"
+    node10 --> node12
+    node2 -->|"Text layer"| node13{"Macro playback or batch?"}
+    click node13 openCode "Modules/Processor.bas:2361:2380"
+    node13 -->|"Yes"| node14["Create and initialize text layer"]
+    click node14 openCode "Modules/Processor.bas:2366:2378"
+    node13 -->|"No"| node15["Add text layer to Undo/Redo chain"]
+    click node15 openCode "Modules/Processor.bas:2357:2360"
+    node14 --> node12
+    node15 --> node12
+    node2 -->|"Modify visibility"| node16["Change layer visibility"]
+    click node16 openCode "Modules/Processor.bas:2476:2496"
+    node16 --> node12
+    node2 -->|"Rasterize/Convert"| node17["Rasterize or convert layer"]
+    click node17 openCode "Modules/Processor.bas:2594:2600"
+    node17 --> node12
+    node2 -->|"Other"| node18["Perform other layer operation"]
+    click node18 openCode "Modules/Processor.bas:2503:2552"
+    node18 --> node12
+    node2 -->|"Unrecognized"| node12["Return success"]
+    click node12 openCode "Modules/Processor.bas:2351:2626"
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -1666,7 +1707,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In Process_LayerMenu, we match the incoming processID against a big list of known layer commands. For each match, we either show a dialog (if raiseDialog is set) or call the relevant Layers method directly, passing parameters parsed from XML. This setup means we can handle both interactive and automated actions, and the XML parsing lets us pass around complex data for things like multi-layer ops. We call into Interface.bas next when a dialog is needed, so the user can provide input before the action runs.
+In `Process_LayerMenu`, we match the processID against a bunch of layer commands and dispatch to the right Layers method, using XML to parse parameters for flexibility. Dialogs pop up for interactive ops if requested, otherwise everything runs headless for macros or batch. Undo/redo hooks are wired in via parameters, so every action can be tracked or reversed. Next up, we call Modules/Interface.bas for dialog handling when user input is needed.
 
 ```visual basic
 Private Function Process_LayerMenu(ByVal processID As String, Optional ByVal raiseDialog As Boolean = False, Optional ByRef processParameters As String = vbNullString, Optional ByRef createUndo As PD_UndoType = UNDO_Nothing, Optional ByVal relevantTool As Long = -1, Optional ByRef recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -1696,7 +1737,7 @@ Private Function Process_LayerMenu(ByVal processID As String, Optional ByVal rai
 
 ---
 
-After returning from Interface.bas (if a dialog was shown), Process_LayerMenu handles text layer commands. If we're running a macro or batch, it creates the text layer and restores its state from XML, so automated tasks can recreate layers exactly. Otherwise, it just updates undo/redo for normal usage. DialogManager.bas is called next for any actions that need user input via dialogs.
+After returning from Modules/Interface.bas, Process_LayerMenu checks if we're running a macro or batch. For text and typography layers, it uses XML to rebuild the layer exactly as recorded, so macros play back precisely. Otherwise, it just adds the new text layer to undo/redo. Next, we call Modules/DialogManager.bas for dialog-based layer ops like resizing or rotating when user input is needed.
 
 ```visual basic
     'During normal usage, "New text layer" is a dummy entry used by the on-canvas text tool.  It is called *after* a new layer
@@ -1895,7 +1936,7 @@ After returning from Interface.bas (if a dialog was shown), Process_LayerMenu ha
 
 ---
 
-After returning from DialogManager.bas (if a dialog was shown), Process_LayerMenu keeps routing layer actions that need user input through the right dialog manager function. For example, arbitrary rotation and resizing each get their own dialog if raiseDialog is set. This keeps the UI consistent and lets users tweak settings before running the action.
+After returning from Modules/DialogManager.bas, Process_LayerMenu keeps routing layer ops. For things like arbitrary rotation, if raiseDialog is True, we show the rotation dialog; otherwise, we run the operation headless. This keeps both interactive and automated flows working smoothly. Next, we call Modules/DialogManager.bas again for more dialog-driven layer changes.
 
 ```visual basic
         If raiseDialog Then ShowRotateDialog pdat_SingleLayer Else FormRotate.RotateArbitrary processParameters
@@ -1919,7 +1960,7 @@ After returning from DialogManager.bas (if a dialog was shown), Process_LayerMen
 
 ---
 
-After returning from DialogManager.bas, Process_LayerMenu checks if the next action (like resize or content-aware resize) needs a dialog. If so, it shows the right one; otherwise, it just runs the effect. This keeps things flexible for both interactive and automated use.
+After returning from Modules/DialogManager.bas, Process_LayerMenu checks if we're doing a resize or content-aware resize. If raiseDialog is True, we show the relevant dialog for user input; otherwise, we run the resize directly. This pattern repeats for each interactive layer op.
 
 ```visual basic
     'Destructive layer size changes
@@ -1938,7 +1979,7 @@ After returning from DialogManager.bas, Process_LayerMenu checks if the next act
 
 ---
 
-After returning from DialogManager.bas, Process_LayerMenu checks if content-aware layer resize needs a dialog. If so, it shows it; otherwise, it just runs the resize. This keeps the workflow consistent for both manual and automated actions.
+After returning from Modules/DialogManager.bas, Process_LayerMenu checks for content-aware layer resize. If raiseDialog is True, we show the dialog for user input; otherwise, we run the resize headless. This keeps both manual and automated flows covered.
 
 ```visual basic
         If raiseDialog Then ShowContentAwareResizeDialog pdat_SingleLayer Else FormResizeContentAware.SmartResizeImage processParameters
@@ -1954,7 +1995,7 @@ After returning from DialogManager.bas, Process_LayerMenu checks if content-awar
 
 ---
 
-After returning from DialogManager.bas, Process_LayerMenu checks if the next alpha-related action needs a dialog. If so, it shows the right form from Interface.bas; otherwise, it just runs the effect. This lets users interact when needed, or automates the process if not.
+After returning from Modules/DialogManager.bas, Process_LayerMenu moves on to transparency changes. If raiseDialog is True, we show the relevant dialog for user input; otherwise, we run the alpha adjustment directly. Next, we call Modules/Interface.bas for dialog-driven transparency ops.
 
 ```visual basic
     'Change layer alpha
@@ -1997,7 +2038,7 @@ After returning from DialogManager.bas, Process_LayerMenu checks if the next alp
 
 ---
 
-After returning from Interface.bas, Process_LayerMenu finishes up by handling the rest of the layer commands—rasterizing, on-canvas moves, and dummy entries for undo/redo. The function centralizes all layer-related actions, making it easier to manage, and hooks into undo/redo and macro recording as needed.
+After returning from Modules/Interface.bas, Process_LayerMenu wraps up by dispatching rasterize, on-canvas, and rearrangement ops. Each command is routed to the right Layers method, and dummy entries are used for undo/redo tracking when needed. This keeps all layer actions centralized and future-proof.
 
 ```visual basic
     'Rasterizing
@@ -2042,25 +2083,24 @@ End Function
 
 </SwmSnippet>
 
-## Selection Command Routing
+## Routing Selection Operations
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-  node1["Start: Has the operation already been handled?"]
-  click node1 openCode "Modules/Processor.bas:249:249"
-  node1 --> node2{"Operation already handled?"}
-  click node2 openCode "Modules/Processor.bas:249:249"
-  node2 -->|"No"| node3["Try selection menu operation"]
-  click node3 openCode "Modules/Processor.bas:249:250"
-  node3 --> node4{"Operation handled by selection menu?"}
-  click node4 openCode "Modules/Processor.bas:253:253"
-  node4 -->|"No"| node5["Try adjustment menu operation"]
-  click node5 openCode "Modules/Processor.bas:253:253"
-  node4 -->|"Yes"| node6["Operation handled"]
-  node2 -->|"Yes"| node6["Operation handled"]
-  click node6 openCode "Modules/Processor.bas:249:253"
-
+    node1["Start processing menu operation"] --> node2{"Has selection menu operation already been processed? (processFound)"}
+    click node1 openCode "Modules/Processor.bas:249:249"
+    click node2 openCode "Modules/Processor.bas:249:250"
+    node2 -->|"No"| node3["Try selection menu operation (processID)"]
+    click node3 openCode "Modules/Processor.bas:250:250"
+    node2 -->|"Yes"| node5["Operation complete"]
+    click node5 openCode "Modules/Processor.bas:249:253"
+    node3 --> node4{"Did selection menu operation succeed? (processFound)"}
+    click node4 openCode "Modules/Processor.bas:250:253"
+    node4 -->|"No"| node6["Try adjustment menu operation (processID)"]
+    click node6 openCode "Modules/Processor.bas:253:253"
+    node4 -->|"Yes"| node5
+    node6 --> node5
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -2068,7 +2108,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After returning from Process_LayerMenu, Process checks if the command was handled. If not, it passes the processID to Process_SelectMenu, so selection-related commands get a shot at handling it next. This keeps the routing clean and predictable.
+After returning from Process_LayerMenu, Process checks if the action was handled. If not, it calls Process_SelectMenu to see if the processID matches any selection-related commands. This keeps the flow moving through each menu until something handles the request.
 
 ```visual basic
     'Select menu operations have been successfully migrated to XML strings.  (None of their functions raise special return conditions, FYI.)
@@ -2084,7 +2124,7 @@ After returning from Process_LayerMenu, Process checks if the command was handle
 
 ---
 
-Process_SelectMenu checks the processID and runs the right selection operation, like create, remove, invert, or modify. It uses XML for parameters so we can handle more complex cases (like multi-layer selections) and supports both dialogs and direct execution. Dummy entries are included for undo/redo tracking when selections are moved or resized.
+Process_SelectMenu parses processParameters as XML so it can handle complex selection ops. It matches processID against a bunch of selection commands, routing each to the right method. Dialogs pop up for interactive ops if needed, otherwise everything runs with preset parameters for automation.
 
 ```visual basic
 Private Function Process_SelectMenu(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -2192,7 +2232,7 @@ End Function
 
 ---
 
-After returning from Process_SelectMenu, Process checks if the command was handled. If not, it passes the processID to Process_AdjustmentsMenu, so adjustment-related commands get a shot at handling it next. This keeps the routing predictable and modular.
+After returning from Process_SelectMenu, Process checks if the action was handled. If not, it calls Process_AdjustmentsMenu to see if the processID matches any image adjustment commands. This keeps the flow moving through each menu until something handles the request.
 
 ```visual basic
     'Adjustment menu operations have been successfully migrated to XML strings.  (None of their functions raise special return conditions, FYI.)
@@ -2204,48 +2244,49 @@ After returning from Process_SelectMenu, Process checks if the command was handl
 
 </SwmSnippet>
 
-## Adjustment Command Dispatch and Execution
+## Dispatching Image Adjustments
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
     node1["User selects adjustment/filter from menu"]
-    click node1 openCode "Modules/Processor.bas:2030:2128"
+    click node1 openCode "Modules/Processor.bas:2030:2125"
     node1 --> node2{"Which adjustment/filter is selected?"}
-    click node2 openCode "Modules/Processor.bas:2032:2184"
-    node2 -->|"Film negative"| node3["Film Negative Effect and Progress Updates"]
+    click node2 openCode "Modules/Processor.bas:2032:2182"
+    node2 -->|"Film negative"| node3["Applying Film Negative and Progress Updates"]
     
-    node2 -->|"Invert hue"| node4["Hue Inversion Effect and Progress Updates"]
+    node2 -->|"Invert hue"| node4["Inverting Hue Channel"]
     
-    node2 -->|"Invert RGB"| node5["RGB Inversion Effect and Progress Updates"]
+    node2 -->|"Invert RGB"| node5["Applying RGB Inversion"]
     
-    node2 -->|"Shift colors left"| node6["RGB Channel Shift Effect and Progress Updates"]
+    node2 -->|"Shift colors left"| node6["Shifting RGB Channels"]
     
-    node2 -->|"Shift colors right"| node7["RGB Channel Shift Effect and Progress Updates"]
+    node2 -->|"Shift colors right"| node7["Shifting RGB Channels"]
     
-    node2 -->|"Maximum channel"| node8["Channel Max/Min Pixel Processing"]
+    node2 -->|"Maximum channel"| node8["Applying Max/Min Channel Filter"]
     
-    node2 -->|"Minimum channel"| node9["Channel Max/Min Pixel Processing"]
+    node2 -->|"Minimum channel"| node9["Applying Max/Min Channel Filter"]
     
-    node2 -->|"Other recognized adjustment"| node10["Show dialog or apply adjustment directly"]
-    click node10 openCode "Modules/Processor.bas:2032:2184"
-    node2 -->|"Unrecognized adjustment"| node11["No adjustment applied"]
-    click node11 openCode "Modules/Processor.bas:2197:2199"
+    node2 -->|"Other adjustment/filter"| node10{"Show dialog or apply directly?"}
+    click node10 openCode "Modules/Processor.bas:2032:2182"
+    node10 -->|"Show dialog"| node11["Show adjustment/filter dialog"]
+    click node11 openCode "Modules/Processor.bas:2032:2182"
+    node10 -->|"Apply directly"| node3
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
-click node3 goToHeading "Film Negative Effect and Progress Updates"
+click node3 goToHeading "Applying Film Negative and Progress Updates"
 node3:::HeadingStyle
-click node4 goToHeading "Hue Inversion Effect and Progress Updates"
+click node4 goToHeading "Inverting Hue Channel"
 node4:::HeadingStyle
-click node5 goToHeading "RGB Inversion Effect and Progress Updates"
+click node5 goToHeading "Applying RGB Inversion"
 node5:::HeadingStyle
-click node6 goToHeading "RGB Channel Shift Effect and Progress Updates"
+click node6 goToHeading "Shifting RGB Channels"
 node6:::HeadingStyle
-click node7 goToHeading "RGB Channel Shift Effect and Progress Updates"
+click node7 goToHeading "Shifting RGB Channels"
 node7:::HeadingStyle
-click node8 goToHeading "Channel Max/Min Pixel Processing"
+click node8 goToHeading "Applying Max/Min Channel Filter"
 node8:::HeadingStyle
-click node9 goToHeading "Channel Max/Min Pixel Processing"
+click node9 goToHeading "Applying Max/Min Channel Filter"
 node9:::HeadingStyle
 ```
 
@@ -2253,7 +2294,7 @@ node9:::HeadingStyle
 
 ---
 
-In Process_AdjustmentsMenu, we match the processID to a known adjustment command. For each match, we either show a dialog (if raiseDialog is set) or call the adjustment function directly with the parameters. This covers everything from brightness/contrast to color balance and more. Interface.bas is called next for dialog-based adjustments, so the user can tweak settings before applying them.
+In Process_AdjustmentsMenu, we match processID against a bunch of adjustment commands. For each, we either show a dialog for user input or run the adjustment directly if raiseDialog is False. Some ops (like auto correct/enhance) run headless, no dialog needed. Next, we call Modules/Interface.bas for dialog-driven adjustments.
 
 ```visual basic
 Private Function Process_AdjustmentsMenu(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -2363,7 +2404,7 @@ Private Function Process_AdjustmentsMenu(ByVal processID As String, Optional rai
 
 ---
 
-In Process_AdjustmentsMenu, when the processID is 'Film negative', we call MenuNegative from Filters_Color.bas to run the negative filter. This hands off the pixel manipulation to a specialized function for that effect.
+After returning from Modules/Interface.bas, Process_AdjustmentsMenu routes invert ops like 'Film negative' straight to Filters_Color for fast, headless processing. No dialog needed for these.
 
 ```visual basic
     'Invert operations
@@ -2378,34 +2419,29 @@ In Process_AdjustmentsMenu, when the processID is 'Film negative', we call MenuN
 
 </SwmSnippet>
 
-### Film Negative Effect and Progress Updates
+### Applying Film Negative and Progress Updates
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-  node1["Inform user: Calculating film negative values"]
+  node1["Notify user: Calculating film negative values..."]
   click node1 openCode "Modules/Filters_Color.bas:169:171"
-  node1 --> node2["Prepare image data"]
-  click node2 openCode "Modules/Filters_Color.bas:173:176"
-  node2 --> node3["Set up progress bar"]
-  click node3 openCode "Modules/Filters_Color.bas:187:189"
-  node3 --> node4["Start pixel processing"]
-  click node4 openCode "Modules/Filters_Color.bas:197:221"
+  node1 --> node2["Begin processing image"]
+  click node2 openCode "Modules/Filters_Color.bas:173:193"
   subgraph loop1["For each pixel in selected area"]
-    node4 --> node5["Transform pixel to negative"]
-    click node5 openCode "Modules/Filters_Color.bas:200:214"
-    node5 --> node6{"Did user press ESC?"}
+    node2 --> node3["Invert pixel luminance"]
+    click node3 openCode "Modules/Filters_Color.bas:197:214"
+    node3 --> node4["Update progress bar"]
+    click node4 openCode "Modules/Filters_Color.bas:217:220"
+    node4 --> node5{"User pressed ESC?"}
+    click node5 openCode "Modules/Filters_Color.bas:218:218"
+    node5 -->|"Yes"| node6["Cancel operation"]
     click node6 openCode "Modules/Filters_Color.bas:218:218"
-    node6 -->|"Yes"| node10["Cancel operation"]
-    click node10 openCode "Modules/Filters_Color.bas:218:218"
-    node6 -->|"No"| node7["Update progress bar"]
-    click node7 openCode "Modules/Filters_Color.bas:219:220"
-    node7 --> node4
+    node5 -->|"No"| node3
   end
-  node4 --> node8["Finalize image data"]
-  click node8 openCode "Modules/Filters_Color.bas:224:227"
-  node10 --> node9["End"]
-  click node9 openCode "Modules/Filters_Color.bas:229:229"
+  node2 --> node7["Show negative image to user"]
+  click node7 openCode "Modules/Filters_Color.bas:224:229"
+
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -2413,7 +2449,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In MenuNegative, we kick off the effect by showing a message to the user so they know the negative filter is running. This uses Interface.bas to display the status.
+In MenuNegative, we kick off by showing a message so the user knows we're calculating film negative values. This keeps the UI in sync with what's happening next.
 
 ```visual basic
 Public Sub MenuNegative()
@@ -2430,7 +2466,7 @@ Public Sub MenuNegative()
 
 ---
 
-Message checks for duplicates before displaying anything, translates the string if needed, and appends a 'Recording' tag if macros are active. It then shows the message on the canvas unless we're in batch mode.
+Message checks for duplicates before displaying anything, translates if needed, and adds a 'Recording' tag if macros are active. It posts the message to the canvas unless we're in batch mode, and logs it for debugging if enabled.
 
 ```visual basic
 Public Sub Message(ByVal mString As String, ParamArray ExtraText() As Variant)
@@ -2517,7 +2553,7 @@ End Sub
 
 ---
 
-SetProgBarVal updates the progress bar and Windows taskbar (if supported), but skips all that if we're running a batch macro. It also processes paint messages to keep the UI responsive during long operations.
+After showing the message, MenuNegative grabs the image data as a byte array, loops over each pixel, converts RGB to HSL, inverts luminance, then writes back the new RGB. Progress bar updates are throttled for speed, and the user can bail out with ESC. Next, we call ProgressBars to update progress.
 
 ```visual basic
     'Create a local array and point it at the pixel data we want to operate on
@@ -2580,7 +2616,7 @@ SetProgBarVal updates the progress bar and Windows taskbar (if supported), but s
 
 ---
 
-SetProgBarVal updates the progress bar and Windows taskbar (if supported), but skips all that if we're running a batch macro. It also processes paint messages to keep the UI responsive during long operations.
+SetProgBarVal updates the progress bar only if we're not in batch macro mode, pushes progress to the Windows taskbar if supported, and calls DoEvents_PaintOnly to keep the UI responsive during long ops.
 
 ```visual basic
 Public Sub SetProgBarVal(ByVal pbVal As Double)
@@ -2609,7 +2645,7 @@ End Sub
 
 ---
 
-After updating progress, MenuNegative deallocates the imageData array and calls EffectPrep.FinalizeImageData to finish up rendering and cleanup.
+After progress updates, MenuNegative unwraps the imageData array to free memory, then calls FinalizeImageData to finish rendering and update the display.
 
 ```visual basic
     'Safely deallocate imageData()
@@ -2625,32 +2661,13 @@ End Sub
 
 </SwmSnippet>
 
-### Hue and RGB Inversion Routing
-
-```mermaid
-%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
-flowchart TD
-    node1["User selects adjustment from Adjustments menu"] --> node2{"processID: Which adjustment?"}
-    click node1 openCode "Modules/Processor.bas:2133:2136"
-    click node2 openCode "Modules/Processor.bas:2133:2136"
-    node2 -->|"Invert Hue"| node3["Apply hue inversion to image"]
-    click node3 openCode "Modules/Processor.bas:2133:2134"
-    node2 -->|"Invert RGB"| node4["Apply RGB inversion to image"]
-    click node4 openCode "Modules/Processor.bas:2136:2136"
-    node2 -->|"Other/Unsupported"| node5["No adjustment applied"]
-    click node5 openCode "Modules/Processor.bas:2133:2136"
-    node3 --> node6["Adjustment applied"]
-    node4 --> node6
-    node5 --> node6
-    click node6 openCode "Modules/Processor.bas:2134:2136"
-classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
-```
+### Applying Hue and RGB Inversion
 
 <SwmSnippet path="/Modules/Processor.bas" line="2133">
 
 ---
 
-After running MenuNegative, Process_AdjustmentsMenu checks for 'Invert hue' and calls MenuInvertHue from Filters_Color.bas to handle hue inversion. This hands off the pixel work to a specialized function for that effect.
+After finishing MenuNegative, Process_AdjustmentsMenu moves on to hue inversion by calling MenuInvertHue, then RGB inversion if requested. Each op runs in sequence for stacked effects.
 
 ```visual basic
         MenuInvertHue
@@ -2663,29 +2680,30 @@ After running MenuNegative, Process_AdjustmentsMenu checks for 'Invert hue' and 
 
 </SwmSnippet>
 
-### Hue Inversion Effect and Progress Updates
+### Inverting Hue Channel
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Start hue inversion filter"] --> node2["Select area to process"]
-    click node1 openCode "Modules/Filters_Color.bas:232:234"
-    click node2 openCode "Modules/Filters_Color.bas:236:246"
-    node2 --> node3["Begin hue inversion"]
-    click node3 openCode "Modules/Filters_Color.bas:257:259"
-    subgraph loop1["For each pixel in selected area"]
-        node3 --> node4["Invert pixel hue"]
-        click node4 openCode "Modules/Filters_Color.bas:263:273"
-        node4 --> node5{"User pressed ESC?"}
-        click node5 openCode "Modules/Filters_Color.bas:285:285"
-        node5 -->|"Yes"| node6["Cancel operation"]
-        click node6 openCode "Modules/Filters_Color.bas:285:285"
-        node5 -->|"No"| node4
-    end
-    node4 --> node7["Finalize and display result"]
-    click node7 openCode "Modules/Filters_Color.bas:290:294"
-    node7 --> node8["End filter"]
-    click node8 openCode "Modules/Filters_Color.bas:296:296"
+  node1["Start hue inversion on selected area"]
+  click node1 openCode "Modules/Filters_Color.bas:232:234"
+  node1 --> node2["Begin pixel processing"]
+  click node2 openCode "Modules/Filters_Color.bas:236:257"
+
+  subgraph loop1["For each pixel in selected area"]
+    node2 --> node3["Invert hue of pixel"]
+    click node3 openCode "Modules/Filters_Color.bas:260:283"
+    node3 --> node4{"User cancels?"}
+    click node4 openCode "Modules/Filters_Color.bas:284:285"
+    node4 -->|"No"| node3
+    node4 -->|"Yes"| node5["Stop operation"]
+    click node5 openCode "Modules/Filters_Color.bas:285:285"
+  end
+
+  node3 --> node6["Finalize image"]
+  click node6 openCode "Modules/Filters_Color.bas:290:295"
+  node6 --> node7["Operation complete"]
+  click node7 openCode "Modules/Filters_Color.bas:296:296"
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
@@ -2694,7 +2712,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In MenuInvertHue, we start by showing a message to let the user know the hue inversion is happening. This uses Interface.bas for status feedback.
+In MenuInvertHue, we start by showing a message so the user knows we're inverting hue. This keeps the UI in sync with what's happening next.
 
 ```visual basic
 Public Sub MenuInvertHue()
@@ -2711,7 +2729,7 @@ Public Sub MenuInvertHue()
 
 ---
 
-After showing the message, MenuInvertHue wraps the image data, loops through each pixel, converts RGB to HSL, inverts the hue, converts back to RGB, and writes the result. Progress bar updates are optimized to avoid slowing things down.
+After showing the message, MenuInvertHue grabs the image data as a byte array, loops over each pixel, converts RGB to HSL, inverts hue, then writes back the new RGB. Progress bar updates are throttled for speed, and the user can bail out with ESC. Next, we call ProgressBars to update progress.
 
 ```visual basic
     'Create a local array and point it at the pixel data we want to operate on
@@ -2778,7 +2796,7 @@ After showing the message, MenuInvertHue wraps the image data, loops through eac
 
 ---
 
-After updating progress, MenuInvertHue deallocates the imageData array and calls EffectPrep.FinalizeImageData to finish up rendering and cleanup.
+After progress updates, MenuInvertHue unwraps the imageData array to free memory, then calls FinalizeImageData to finish rendering and update the display.
 
 ```visual basic
     'Safely deallocate imageData()
@@ -2794,13 +2812,13 @@ End Sub
 
 </SwmSnippet>
 
-### RGB Inversion Routing
+### Inverting RGB Channels
 
 <SwmSnippet path="/Modules/Processor.bas" line="2137">
 
 ---
 
-After running MenuInvertHue, Process_AdjustmentsMenu checks for 'Invert RGB' and calls MenuInvert from Filters_Color.bas to handle the RGB inversion. This hands off the pixel work to a specialized function for that effect.
+After finishing MenuInvertHue, Process_AdjustmentsMenu moves on to RGB inversion by calling MenuInvert if requested. Each op runs in sequence for stacked effects.
 
 ```visual basic
         MenuInvert
@@ -2812,28 +2830,26 @@ After running MenuInvertHue, Process_AdjustmentsMenu checks for 'Invert RGB' and
 
 </SwmSnippet>
 
-### RGB Inversion Effect and Progress Updates
+### Applying RGB Inversion
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Start color inversion"] --> node2["Prepare selected area"]
+    node1["Start inverting colors in selected area"]
     click node1 openCode "Modules/Filters_Color.bas:57:59"
-    click node2 openCode "Modules/Filters_Color.bas:61:75"
-    node2 --> node3["Process selected area"]
-    click node3 openCode "Modules/Filters_Color.bas:77:87"
+    node1 --> node2["Begin processing selected area"]
+    click node2 openCode "Modules/Filters_Color.bas:61:87"
     
-    subgraph loop1["For each row and pixel in selected area (initX, initY, finalX, finalY)"]
-        node3 --> node4["Invert pixel colors"]
-        click node4 openCode "Modules/Filters_Color.bas:90:93"
-        node4 --> node5{"User pressed ESC?"}
-        click node5 openCode "Modules/Filters_Color.bas:95:95"
-        node5 -->|"No"| node3
-        node5 -->|"Yes"| node6["Stop inversion"]
-        click node6 openCode "Modules/Filters_Color.bas:95:95"
+    subgraph loop1["For each pixel in the selected area"]
+        node2 --> node3["Invert pixel color"]
+        click node3 openCode "Modules/Filters_Color.bas:90:92"
+        node3 --> node4{"Did user cancel?"}
+        click node4 openCode "Modules/Filters_Color.bas:94:95"
+        node4 -->|"Yes"| node6["Finish and update image"]
+        node4 -->|"No"| node2
     end
-    node3 --> node7["Finalize image"]
-    click node7 openCode "Modules/Filters_Color.bas:104:105"
+    node2 --> node6["Finish and update image"]
+    click node6 openCode "Modules/Filters_Color.bas:101:104"
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
@@ -2842,7 +2858,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In MenuInvert, we start by showing a message to let the user know the RGB inversion is happening. This uses Interface.bas for status feedback.
+In MenuInvert, we start by showing a message so the user knows we're inverting RGB. This keeps the UI in sync with what's happening next.
 
 ```visual basic
 Public Sub MenuInvert()
@@ -2859,7 +2875,7 @@ Public Sub MenuInvert()
 
 ---
 
-After showing the message, MenuInvert wraps the image data, loops through each pixel, and inverts the RGB channels using XOR. The alpha channel is untouched. Progress is updated as we go, and the pixel array is deallocated and finalized at the end.
+After showing the message, MenuInvert grabs the image data as a byte array, loops over each pixel, and XORs the RGB channels with 255 to invert them. Progress bar updates are throttled for speed, and the user can bail out with ESC. After processing, we unwrap the array and finalize rendering.
 
 ```visual basic
     'Create a local array and point it at the pixel data we want to operate on
@@ -2914,47 +2930,28 @@ End Sub
 
 </SwmSnippet>
 
-### Map, Monochrome, and Channel Adjustment Routing
+### Mapping and Monochrome Adjustments
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects adjustment operation"] --> node2{"Which adjustment?"}
+    node1["User selects an adjustment or channel operation"] --> node2{"Which operation is selected?"}
     click node1 openCode "Modules/Processor.bas:2140:2180"
-    node2 -->|"Gradient map"| node3{"Show dialog?"}
-    node2 -->|"Palette map"| node4{"Show dialog?"}
-    node2 -->|"Color to monochrome"| node5{"Show dialog?"}
-    node2 -->|"Monochrome to gray"| node6{"Show dialog?"}
-    node2 -->|"Channel mixer"| node7{"Show dialog?"}
-    node2 -->|"Rechannel"| node8{"Show dialog?"}
-    node2 -->|"Shift colors"| node9{"Left or Right?"}
-    node2 -->|"Max/Min channel"| node10{"Max or Min?"}
-    click node2 openCode "Modules/Processor.bas:2140:2180"
-    node3 -->|"Yes"| node11["Show dialog for Gradient map"]
-    node3 -->|"No"| node12["Apply Gradient map effect"]
-    click node3 openCode "Modules/Processor.bas:2141:2143"
-    node4 -->|"Yes"| node13["Show dialog for Palette map"]
-    node4 -->|"No"| node14["Apply Palette map effect"]
-    click node4 openCode "Modules/Processor.bas:2145:2147"
-    node5 -->|"Yes"| node15["Show dialog for Monochrome"]
-    node5 -->|"No"| node16["Apply Monochrome effect"]
-    click node5 openCode "Modules/Processor.bas:2151:2153"
-    node6 -->|"Yes"| node17["Show dialog for Mono to gray"]
-    node6 -->|"No"| node18["Apply Mono to gray effect"]
-    click node6 openCode "Modules/Processor.bas:2155:2157"
-    node7 -->|"Yes"| node19["Show dialog for Channel mixer"]
-    node7 -->|"No"| node20["Apply Channel mixer effect"]
-    click node7 openCode "Modules/Processor.bas:2160:2162"
-    node8 -->|"Yes"| node21["Show dialog for Rechannel"]
-    node8 -->|"No"| node22["Apply Rechannel effect"]
-    click node8 openCode "Modules/Processor.bas:2164:2166"
-    node9 -->|"Left"| node23["Shift colors left"]
-    node9 -->|"Right"| node24["Shift colors right"]
-    click node9 openCode "Modules/Processor.bas:2168:2174"
-    node10 -->|"Max"| node25["Apply Maximum channel"]
-    node10 -->|"Min"| node26["Apply Minimum channel"]
-    click node10 openCode "Modules/Processor.bas:2176:2180"
-
+    node2 -->|"Gradient map, Palette map, Color to monochrome, Monochrome to gray, Channel mixer, Rechannel"| node3{"Show dialog? (raiseDialog)"}
+    node2 -->|"Shift colors (left)"| node4["Shift colors left"]
+    node2 -->|"Shift colors (right)"| node5["Shift colors right"]
+    node2 -->|"Maximum channel"| node6["Apply maximum channel filter"]
+    node2 -->|"Minimum channel"| node7["Apply minimum channel filter"]
+    click node2 openCode "Modules/Processor.bas:2141:2180"
+    node3 -->|"Yes"| node8["Show dialog for selected operation"]
+    node3 -->|"No"| node9["Apply selected operation immediately"]
+    click node3 openCode "Modules/Processor.bas:2142:2166"
+    click node4 openCode "Modules/Processor.bas:2168:2170"
+    click node5 openCode "Modules/Processor.bas:2172:2174"
+    click node6 openCode "Modules/Processor.bas:2176:2178"
+    click node7 openCode "Modules/Processor.bas:2180:2182"
+    click node8 openCode "Modules/Processor.bas:2142:2166"
+    click node9 openCode "Modules/Processor.bas:2142:2166"
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -2962,7 +2959,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After returning from Filters_Color.bas, Process_AdjustmentsMenu checks if the next map, monochrome, or channel adjustment needs a dialog. If so, it shows the right form from Interface.bas; otherwise, it just runs the effect. This lets users interact when needed, or automates the process if not.
+After returning from MenuInvert, Process_AdjustmentsMenu moves on to mapping and monochrome ops. If raiseDialog is True, we show the relevant dialog for user input; otherwise, we run the adjustment directly. This keeps both manual and automated flows covered.
 
 ```visual basic
     'Map operations
@@ -3008,7 +3005,7 @@ After returning from Filters_Color.bas, Process_AdjustmentsMenu checks if the ne
 
 ---
 
-After returning from Interface.bas, Process_AdjustmentsMenu checks for color shift and channel max/min commands, and calls the right function in Filters_Color.bas to handle the pixel manipulation.
+After returning from Modules/Interface.bas, Process_AdjustmentsMenu routes channel ops like color shift straight to Filters_Color for fast, headless processing. No dialog needed for these.
 
 ```visual basic
         MenuCShift False
@@ -3025,32 +3022,35 @@ After returning from Interface.bas, Process_AdjustmentsMenu checks for color shi
 
 </SwmSnippet>
 
-### RGB Channel Shift Effect and Progress Updates
+### Shifting RGB Channels
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User chooses to shift image colors"] --> node2["Prepare image for editing"]
-    click node1 openCode "Modules/Filters_Color.bas:109:111"
-    click node2 openCode "Modules/Filters_Color.bas:113:116"
-    
+    node1["Show message: Shifting RGB values..."] --> node2{"Shift direction?"}
+    click node1 openCode "Modules/Filters_Color.bas:111:111"
     subgraph loop1["For each pixel in selected area"]
-        node3{"Shift direction (shiftLeft)?"}
-        click node3 openCode "Modules/Filters_Color.bas:139:147"
-        node3 -->|"Left"| node4["Shift colors left"]
-        click node4 openCode "Modules/Filters_Color.bas:140:142"
-        node3 -->|"Right"| node5["Shift colors right"]
-        click node5 openCode "Modules/Filters_Color.bas:144:146"
-        node4 --> node6["Check for user cancel/progress update"]
-        node5 --> node6
-        node6{"Continue or cancel?"}
+        node2 -->|"Left"| node3["Shift color channels left"]
+        click node3 openCode "Modules/Filters_Color.bas:139:143"
+        node2 -->|"Right"| node4["Shift color channels right"]
+        click node4 openCode "Modules/Filters_Color.bas:144:147"
+        node3 --> node5["Update pixel with new colors"]
+        node4 --> node5
+        click node5 openCode "Modules/Filters_Color.bas:149:151"
+        node5 --> node6{"Should update progress bar?"}
         click node6 openCode "Modules/Filters_Color.bas:154:157"
-        node6 -->|"Continue"| node3
-        node6 -->|"Cancel"| node8["Stop processing"]
-        click node8 openCode "Modules/Filters_Color.bas:155:155"
+        node6 -->|"Yes"| node7["Update progress bar"]
+        click node7 openCode "Modules/Filters_Color.bas:157:157"
+        node6 -->|"No"| node8["Continue"]
+        node7 --> node8
+        node8 --> node9{"Did user cancel?"}
+        click node9 openCode "Modules/Filters_Color.bas:155:155"
+        node9 -->|"Yes"| node10["Stop pixel loop"]
+        click node10 openCode "Modules/Filters_Color.bas:155:155"
+        node9 -->|"No"| node2
     end
-    loop1 --> node7["Apply changes to image"]
-    click node7 openCode "Modules/Filters_Color.bas:160:164"
+    loop1 --> node11["Finalize image"]
+    click node11 openCode "Modules/Filters_Color.bas:164:164"
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
@@ -3059,7 +3059,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In MenuCShift, we start by showing a message to let the user know the RGB channel shift is happening. This uses Interface.bas for status feedback.
+In MenuCShift, we start by showing a message so the user knows we're shifting RGB values. This sets up the UI for the color channel swap.
 
 ```visual basic
 Public Sub MenuCShift(Optional ByVal shiftLeft As Boolean = False)
@@ -3076,7 +3076,7 @@ Public Sub MenuCShift(Optional ByVal shiftLeft As Boolean = False)
 
 ---
 
-After showing the message, MenuCShift wraps the image data, loops through each pixel, and shifts the RGB channels left or right depending on the flag. Progress bar updates are optimized, and the pixel array is deallocated and finalized at the end.
+After showing the message, MenuCShift grabs the image data as a byte array, loops over each pixel, swaps the RGB channels left or right, and writes back the new values. Progress bar updates are throttled, and ESC lets the user cancel. Next, we call ProgressBars to update progress.
 
 ```visual basic
     'Create a local array and point it at the pixel data we want to operate on
@@ -3136,7 +3136,7 @@ After showing the message, MenuCShift wraps the image data, loops through each p
 
 ---
 
-After updating progress, MenuCShift deallocates the imageData array and calls EffectPrep.FinalizeImageData to finish up rendering and cleanup.
+After progress updates, MenuCShift unwraps the imageData array to free memory, then calls FinalizeImageData to finish rendering and update the display.
 
 ```visual basic
     'Safely deallocate imageData()
@@ -3152,13 +3152,13 @@ End Sub
 
 </SwmSnippet>
 
-### Channel Max/Min Adjustment Routing
+### Isolating Max/Min Color Channels
 
 <SwmSnippet path="/Modules/Processor.bas" line="2181">
 
 ---
 
-After MenuCShift, Process_AdjustmentsMenu checks for channel max/min adjustments and calls FilterMaxMinChannel if needed, then marks the adjustment as handled.
+After returning from MenuCShift, Process_AdjustmentsMenu calls FilterMaxMinChannel to isolate either the max or min color channel for each pixel. This step applies a visible adjustment and marks the menu as handled.
 
 ```visual basic
         FilterMaxMinChannel False
@@ -3170,23 +3170,26 @@ After MenuCShift, Process_AdjustmentsMenu checks for channel max/min adjustments
 
 </SwmSnippet>
 
-### Channel Max/Min Pixel Processing
+### Applying Max/Min Channel Filter
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects to isolate maximum or minimum color channel"]
-    click node1 openCode "Modules/Filters_Color.bas:299:305"
-    subgraph loop1["For each pixel in selected area"]
-      node2{"Isolate maximum or minimum channel?"}
-      click node2 openCode "Modules/Filters_Color.bas:335:345"
-      node2 -->|"Maximum"| node3["Keep only the dominant color channel"]
-      click node3 openCode "Modules/Filters_Color.bas:336:340"
-      node2 -->|"Minimum"| node4["Keep only the least dominant color channel"]
-      click node4 openCode "Modules/Filters_Color.bas:341:344"
+    node1["User chooses max or min channel isolation"]
+    click node1 openCode "Modules/Filters_Color.bas:301:305"
+    subgraph loop1["For each pixel in selected image area"]
+        node2{"Isolate max or min channel?"}
+        click node2 openCode "Modules/Filters_Color.bas:335:345"
+        node2 -->|"Max"| node3["Set only strongest color channel"]
+        click node3 openCode "Modules/Filters_Color.bas:336:340"
+        node2 -->|"Min"| node4["Set only weakest color channel"]
+        click node4 openCode "Modules/Filters_Color.bas:341:345"
+        node3 --> node5["Update pixel"]
+        node4 --> node5
+        click node5 openCode "Modules/Filters_Color.bas:347:349"
     end
-    loop1 --> node5["Finalize and update image"]
-    click node5 openCode "Modules/Filters_Color.bas:358:363"
+    loop1 --> node6["Finalize image"]
+    click node6 openCode "Modules/Filters_Color.bas:362:363"
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -3194,7 +3197,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-FilterMaxMinChannel starts by telling the user what it's about to do (max or min channel isolation) before jumping into pixel processing.
+In FilterMaxMinChannel, we show a message to let the user know if we're isolating max or min color channels. This sets up the UI for the next processing step.
 
 ```visual basic
 Public Sub FilterMaxMinChannel(ByVal useMax As Boolean)
@@ -3215,7 +3218,7 @@ Public Sub FilterMaxMinChannel(ByVal useMax As Boolean)
 
 ---
 
-After the message, FilterMaxMinChannel loops through each pixel, using Max3Int/Min3Int to isolate the strongest or weakest channel, and only updates the progress bar occasionally to keep things fast.
+After showing the message, FilterMaxMinChannel wraps a byte array around the image data, loops through each pixel, and uses Max3Int or Min3Int to isolate the dominant or weakest channel. Progress bar updates and cancellation checks are handled in the loop.
 
 ```visual basic
     'Create a local array and point it at the pixel data we want to operate on
@@ -3262,7 +3265,7 @@ After the message, FilterMaxMinChannel loops through each pixel, using Max3Int/M
 
 ---
 
-Max3Int just picks the largest of three values using nested Ifs. It's a helper for the channel isolation filter, since VB6 doesn't have a built-in max-of-three.
+Max3Int compares three values and returns the largest. It's used here to pick the strongest color channel for each pixel.
 
 ```visual basic
 Public Function Max3Int(ByVal rR As Long, ByVal rG As Long, ByVal rB As Long) As Long
@@ -3282,7 +3285,7 @@ End Function
 
 ---
 
-Back in FilterMaxMinChannel, after handling the max branch, we use Min3Int (from PDMath.bas) to find the weakest channel for the min branch, zeroing out the others. This keeps the logic symmetric and lets the filter handle both modes.
+After using Max3Int for max channel isolation, FilterMaxMinChannel calls Min3Int for the min channel case. This lets us zero out all but the weakest channel per pixel.
 
 ```visual basic
             minVal = Min3Int(r, g, b)
@@ -3308,7 +3311,7 @@ Back in FilterMaxMinChannel, after handling the max branch, we use Min3Int (from
 
 ---
 
-Min3Int is just like Max3Int, but it finds the smallest of three numbers. It's used by the filter to isolate the weakest channel per pixel.
+Min3Int compares three values and returns the smallest. It's used here to pick the weakest color channel for each pixel.
 
 ```visual basic
 Public Function Min3Int(ByVal rR As Long, ByVal rG As Long, ByVal rB As Long) As Long
@@ -3328,7 +3331,7 @@ End Function
 
 ---
 
-After the pixel math, FilterMaxMinChannel only updates the progress bar every so often (using progBarCheck) and checks for ESC to let the user cancel. This keeps things responsive without bogging down the filter.
+After isolating channels, FilterMaxMinChannel updates the progress bar only at calculated intervals and checks for ESC to let the user cancel if needed.
 
 ```visual basic
             SetProgBarVal y
@@ -3345,7 +3348,7 @@ After the pixel math, FilterMaxMinChannel only updates the progress bar every so
 
 ---
 
-After the pixel loop, FilterMaxMinChannel unwraps the image data array and calls EffectPrep.FinalizeImageData to finish up rendering and cleanup. This makes the changes visible and wraps up the filter.
+After processing, FilterMaxMinChannel unwraps the image data array and calls FinalizeImageData to finish rendering and clean up.
 
 ```visual basic
     'Safely deallocate imageData()
@@ -3361,29 +3364,28 @@ End Sub
 
 </SwmSnippet>
 
-### Histogram and Equalization Adjustment Routing
+### Histogram and Equalization Adjustments
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1{"processID: Which histogram operation did the user select?"}
-    click node1 openCode "Modules/Processor.bas:2184:2197"
+    node1{"Which histogram operation did the user select? (processID)"}
+    click node1 openCode "Modules/Processor.bas:2185:2197"
     node1 -->|"Display histogram"| node2["Show histogram dialog"]
     click node2 openCode "Modules/Processor.bas:2186:2187"
+    node2 --> node7["Done"]
+    click node7 openCode "Modules/Processor.bas:2197:2199"
     node1 -->|"Stretch histogram"| node3["Stretch histogram"]
     click node3 openCode "Modules/Processor.bas:2190:2191"
-    node1 -->|"Equalize"| node4{"raiseDialog: Show dialog or run equalize directly?"}
-    click node4 openCode "Modules/Processor.bas:2194:2195"
-    node4 -->|"Show dialog"| node5["Show equalize dialog"]
-    click node5 openCode "Modules/Processor.bas:2194:2195"
-    node4 -->|"Run directly"| node6["Equalize histogram"]
-    click node6 openCode "Modules/Processor.bas:2194:2195"
-    node2 --> node7["Operation complete, return to menu"]
     node3 --> node7
+    node1 -->|"Equalize"| node4{"Show dialog before equalizing? (raiseDialog)"}
+    click node4 openCode "Modules/Processor.bas:2194:2195"
+    node4 -->|"Yes"| node5["Show equalize dialog"]
+    click node5 openCode "Modules/Processor.bas:2194:2195"
     node5 --> node7
+    node4 -->|"No"| node6["Equalize histogram automatically"]
+    click node6 openCode "Modules/Processor.bas:2194:2195"
     node6 --> node7
-    click node7 openCode "Modules/Processor.bas:2187:2196"
-
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -3391,7 +3393,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After returning from Filters_Color.bas, Process_AdjustmentsMenu wraps up by routing histogram and equalization adjustments. It shows dialogs for interactive commands or runs the effect directly, then marks the adjustment as handled. This keeps the adjustment flow modular and supports both manual and automated workflows.
+After FilterMaxMinChannel, Process_AdjustmentsMenu wraps up by handling histogram and equalization adjustments, showing dialogs or running ops directly based on processID and raiseDialog.
 
 ```visual basic
     'Histogram functions
@@ -3416,13 +3418,13 @@ End Function
 
 </SwmSnippet>
 
-## Effects Menu Command Routing
+## Routing Effects Menu Actions
 
 <SwmSnippet path="/Modules/Processor.bas" line="255">
 
 ---
 
-If adjustments didn't handle the command, Process tries the effects menu next.
+After Process_AdjustmentsMenu, Process checks if the action was handled. If not, it calls Process_EffectsMenu to handle effect-related actions.
 
 ```visual basic
     'Effects menu operations have been successfully migrated to XML strings.  (None of their functions raise special return conditions, FYI.)
@@ -3434,13 +3436,13 @@ If adjustments didn't handle the command, Process tries the effects menu next.
 
 </SwmSnippet>
 
-## Effect Dispatch and Dialog Routing
+## Dispatching Effects and Filters
 
 <SwmSnippet path="/Modules/Processor.bas" line="1640">
 
 ---
 
-In Process_EffectsMenu, we match the processID to a known effect. If raiseDialog is set, we show a dialog for user input; otherwise, we run the effect directly. This pattern repeats for all supported effects, keeping things flexible for both manual and automated workflows.
+In Process_EffectsMenu, we match the processID to a long list of effects. For each, we either show a dialog for user input or run the effect directly, depending on raiseDialog. This keeps effect handling centralized and makes it easy to add new ones.
 
 ```visual basic
 Private Function Process_EffectsMenu(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -3529,7 +3531,7 @@ Private Function Process_EffectsMenu(ByVal processID As String, Optional raiseDi
 
 ---
 
-After handling standard effects, Process_EffectsMenu checks for Grid blur. If matched, it calls FilterGridBlur directly (no dialog), since this effect isn't exposed to users and is slated for future migration.
+After handling dialog-based effects, Process_EffectsMenu checks for legacy/special-case effects like Grid blur. These are called directly for compatibility, not through the dialog system.
 
 ```visual basic
     'TODO: Grid blur (and previously, chroma blur) lived here.  Chroma blur has been removed because I'm going to
@@ -3545,47 +3547,46 @@ After handling standard effects, Process_EffectsMenu checks for Grid blur. If ma
 
 </SwmSnippet>
 
-### Grid Blur Pixel Processing
+### Applying Grid Blur
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Start grid blur filter"]
-    click node1 openCode "Modules/Filters_Area.bas:277:278"
-    subgraph loop1["For each column in image"]
-        node2["Calculate vertical color averages"]
-        click node2 openCode "Modules/Filters_Area.bas:314:327"
-    end
+    node1["Prepare image data for grid blur"]
+    click node1 openCode "Modules/Filters_Area.bas:277:313"
     node1 --> loop1
-    subgraph loop2["For each row in image"]
-        node3["Calculate horizontal color averages"]
-        click node3 openCode "Modules/Filters_Area.bas:330:343"
+    subgraph loop1["For each vertical line in area"]
+      node2["Sum and store vertical color values"]
+      click node2 openCode "Modules/Filters_Area.bas:314:327"
     end
     loop1 --> loop2
-    subgraph loop3["For each pixel in image"]
-        node4["Average vertical and horizontal color values"]
-        click node4 openCode "Modules/Filters_Area.bas:348:355"
-        node4 --> node5{"Is any color value > 255?"}
-        click node5 openCode "Modules/Filters_Area.bas:358:360"
-        node5 -->|"Yes"| node6["Clamp color value to 255"]
-        click node6 openCode "Modules/Filters_Area.bas:358:360"
-        node5 -->|"No"| node7["Keep color value"]
-        click node7 openCode "Modules/Filters_Area.bas:353:355"
-        node6 --> node8["Write new color to pixel"]
-        node7 --> node8
-        click node8 openCode "Modules/Filters_Area.bas:363:365"
-        node8 --> node9{"Did user cancel?"}
-        click node9 openCode "Modules/Filters_Area.bas:369:369"
-        node9 -->|"Yes"| node10["Exit filter early"]
-        click node10 openCode "Modules/Filters_Area.bas:369:369"
-        node9 -->|"No"| node11["Continue to next pixel"]
-        click node11 openCode "Modules/Filters_Area.bas:367:372"
-        node11 --> node4
+    subgraph loop2["For each horizontal line in area"]
+      node3["Sum and store horizontal color values"]
+      click node3 openCode "Modules/Filters_Area.bas:330:343"
     end
     loop2 --> loop3
-    loop3 --> node12["Finalize image and finish"]
+    subgraph loop3["For each pixel in area"]
+      node4["Average vertical and horizontal sums for pixel"]
+      click node4 openCode "Modules/Filters_Area.bas:348:355"
+      node4 --> node5{"Is any color value > 255?"}
+      click node5 openCode "Modules/Filters_Area.bas:358:360"
+      node5 -->|"Yes"| node6["Clamp color values to 255"]
+      click node6 openCode "Modules/Filters_Area.bas:358:360"
+      node5 -->|"No"| node7["Use calculated values"]
+      click node7 openCode "Modules/Filters_Area.bas:353:355"
+      node6 --> node8["Update pixel color"]
+      node7 --> node8
+      click node8 openCode "Modules/Filters_Area.bas:363:365"
+      node8 --> node9["Update progress bar and check for user cancel"]
+      click node9 openCode "Modules/Filters_Area.bas:368:371"
+      node9 --> node10{"User cancelled?"}
+      click node10 openCode "Modules/Filters_Area.bas:369:369"
+      node10 -->|"Yes"| node11["Exit blur early"]
+      click node11 openCode "Modules/Filters_Area.bas:369:369"
+      node10 -->|"No"| node4
+    end
+    loop3 --> node12["Finalize and clean up image data"]
     click node12 openCode "Modules/Filters_Area.bas:374:380"
-
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -3593,7 +3594,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-FilterGridBlur averages vertical and horizontal lines for each pixel, clamps the result, and throttles progress bar updates.
+In FilterGridBlur, we sum up RGB values for each column and row, then average them for each pixel to get the grid blur. Arrays hold the sums, and numOfPixels is width + height for the averaging.
 
 ```visual basic
 Public Sub FilterGridBlur()
@@ -3676,7 +3677,7 @@ Public Sub FilterGridBlur()
 
 ---
 
-After prepping the grid blur arrays, we loop through each pixel, average the vertical and horizontal sums, clamp the result, and write it back. Progress bar updates are throttled, and ESC checks let the user cancel if needed.
+After setting up the sums, FilterGridBlur loops through each pixel, averages the vertical and horizontal sums, clamps the values, writes them back, and updates the progress bar at intervals. ESC lets the user cancel.
 
 ```visual basic
     'Apply the filter
@@ -3716,7 +3717,7 @@ After prepping the grid blur arrays, we loop through each pixel, average the ver
 
 ---
 
-After the pixel loop, FilterGridBlur unwraps the image data array and calls EffectPrep.FinalizeImageData to finish up rendering and cleanup. This makes the changes visible and wraps up the filter.
+After processing, FilterGridBlur unwraps the image data array and calls FinalizeImageData to finish rendering and clean up.
 
 ```visual basic
     'Safely deallocate imageData()
@@ -3732,24 +3733,23 @@ End Sub
 
 </SwmSnippet>
 
-### Distort, Edge, and Plugin Effect Routing
+### Dispatching Distort, Edge, and Other Effects
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects an effect from the Effects menu"]
+    node1["User selects an effect from the Effects menu"] --> node2{"Which effect category is selected?"}
     click node1 openCode "Modules/Processor.bas:1723:2014"
-    node1 --> node2{"Which effect category is selected?"}
-    click node2 openCode "Modules/Processor.bas:1723:2014"
     node2 -->|"Distort, Edge, Light, Noise, Pixelate, Render, Sharpen, Stylize, Transform, Animation, Custom, Plugin"| node3{"Show dialog for user input?"}
-    click node3 openCode "Modules/Processor.bas:1723:2014"
-    node3 -->|"Yes"| node4["Show effect dialog"]
-    click node4 openCode "Modules/Processor.bas:1723:2014"
-    node3 -->|"No"| node5["Apply effect directly"]
-    click node5 openCode "Modules/Processor.bas:1723:2014"
-    node4 --> node6["Effect applied"]
+    click node2 openCode "Modules/Processor.bas:1723:2014"
+    node3 -->|"Yes"| node4["Show dialog for selected effect"]
+    click node3 openCode "Modules/Processor.bas:1725:2013"
+    node3 -->|"No"| node5["Apply selected effect directly"]
+    click node4 openCode "Modules/Processor.bas:1725:2013"
+    click node5 openCode "Modules/Processor.bas:1725:2013"
+    node4 --> node6["Effect applied to image"]
     node5 --> node6
-    click node6 openCode "Modules/Processor.bas:1723:2014"
+    click node6 openCode "Modules/Processor.bas:1726:2014"
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
@@ -3758,7 +3758,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After grid blur, Process_EffectsMenu keeps routing through distort, edge, light, noise, pixelate, render, sharpen, stylize, transform, animation, custom, and plugin effects. For plugins, it hands off to the plugin module, which manages everything from dialogs to execution.
+After FilterGridBlur, Process_EffectsMenu keeps routing effect commands—distort, edge, noise, pixelate, render, sharpen, stylize, transform, animation, and custom filters—using the same dialog-or-direct pattern.
 
 ```visual basic
     'Distort filters
@@ -4064,7 +4064,7 @@ After grid blur, Process_EffectsMenu keeps routing through distort, edge, light,
 
 ---
 
-At the end of Process_EffectsMenu, we handle plugins by matching the processID and calling the plugin handler if needed. This keeps plugin logic separate and lets the plugin module manage its own workflow.
+At the end of Process_EffectsMenu, we handle plugin-based effects with a dedicated wrapper, since their workflow doesn't fit the normal dialog/effect pattern. This keeps things clean for future plugin support.
 
 ```visual basic
     '8bf filters have a weird workflow because we simply call "execute" on the plugin but then all handling
@@ -4083,43 +4083,32 @@ End Function
 
 </SwmSnippet>
 
-## Tools Menu Command Routing
+## Routing Tools Menu Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Receive operation request (processID)"] --> node2{"Is operation handled by tools menu?"}
-    click node1 openCode "Modules/Processor.bas:258:258"
+    node1["Receive requested operation"] --> node2{"Is process found in tool menu?"}
+    click node1 openCode "Modules/Processor.bas:258:259"
+    node2 -->|"Yes"| node3["Execute tool menu or macro action"]
     click node2 openCode "Modules/Processor.bas:259:259"
-    node2 -->|"Yes"| node3["Perform tool/macro action"]
+    node2 -->|"No"| node4{"What type of legacy operation is requested?"}
     click node3 openCode "Modules/Processor.bas:1619:1635"
-    node2 -->|"No"| node4{"Is operation a recognized legacy, paint, or macro action?"}
-    click node4 openCode "Modules/Processor.bas:262:318"
-    node4 -->|"Yes"| node5["Perform legacy/tool/macro action"]
-    click node5 openCode "Modules/Processor.bas:262:318"
-    node4 -->|"No"| node6["Notify user of unknown operation"]
-    click node6 openCode "Modules/Processor.bas:320:327"
-    node5 --> node7{"Is this a macro playback for layer/text modification?"}
-    click node7 openCode "Modules/Processor.bas:305:318"
-    node7 -->|"Yes"| node8["Perform macro layer/text modification"]
-    click node8 openCode "Modules/Processor.bas:664:686"
-    node7 -->|"No"| node9["Continue with operation"]
-    click node9 openCode "Modules/Processor.bas:262:294"
-    node3 --> node10{"Did operation modify image?"}
-    node8 --> node10
-    node9 --> node10
-    node10 -->|"Yes"| node11["Update undo/redo and UI"]
-    click node11 openCode "Modules/Processor.bas:332:352"
-    node10 -->|"No"| node12["No further action"]
-    click node12 openCode "Modules/Processor.bas:329:330"
-    node11 --> node13{"Should timing be reported? (Undo/Redo created?)"}
-    click node13 openCode "Modules/Processor.bas:337:337"
-    node13 -->|"Yes"| node14["Report timing"]
-    click node14 openCode "Modules/Processor.bas:462:471"
-    node13 -->|"No"| node15["Done"]
-    node14 --> node15
-    node12 --> node15
-    node6 --> node15
+    node4 -->|"Paint/Fill/Gradient/Crop"| node5["Execute paint/fill/gradient/crop operation"]
+    click node5 openCode "Modules/Processor.bas:269:297"
+    node4 -->|"Layer/Text modification during macro playback"| node6["Modify layer or text"]
+    click node6 openCode "Modules/Processor.bas:305:317"
+    node4 -->|"Unknown"| node7["Notify user of unknown process"]
+    click node7 openCode "Modules/Processor.bas:325:326"
+    node3 --> node8["Update undo/redo and UI"]
+    node5 --> node8
+    node6 --> node8
+    click node8 openCode "Modules/Processor.bas:332:354"
+    node8 --> node9{"Was undo/redo created?"}
+    node9 -->|"Yes"| node10["Report timing"]
+    node9 -->|"No"| node11["End"]
+    click node10 openCode "Modules/Processor.bas:337:338"
+    click node11 openCode "Modules/Processor.bas:354:354"
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -4127,7 +4116,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-If effects didn't handle the command, Process tries the tools menu next.
+After Process_EffectsMenu, Process checks if the action was handled. If not, it calls Process_ToolsMenu to handle tool and macro-related actions.
 
 ```visual basic
     'Tool menu operations have been successfully migrated to XML strings.  (None of their functions raise special return conditions, FYI.)
@@ -4143,7 +4132,7 @@ If effects didn't handle the command, Process tries the tools menu next.
 
 ---
 
-Process_ToolsMenu checks for macro commands—start, stop, play—and calls the relevant Macros method. If the processID doesn't match, it does nothing. This keeps macro logic isolated from other tool commands.
+Process_ToolsMenu checks the processID for macro commands—start, stop, play—and calls the right Macros method. It returns True if it handled the action.
 
 ```visual basic
 Private Function Process_ToolsMenu(ByVal processID As String, Optional raiseDialog As Boolean = False, Optional processParameters As String = vbNullString, Optional createUndo As PD_UndoType = UNDO_Nothing, Optional relevantTool As Long = -1, Optional recordAction As Boolean = True, Optional ByRef returnDetails As String = vbNullString) As Boolean
@@ -4173,7 +4162,7 @@ End Function
 
 ---
 
-After tools, Process checks for legacy processIDs like paint, fill, and layer/text modifications. For non-destructive changes during macro playback, it calls MiniProcess_NDFX_MacroPlayback to handle those updates cleanly.
+After Process_ToolsMenu, Process checks for legacy paint and layer modification actions. If we're in macro playback or batch mode, it forwards these to MiniProcess_NDFX_MacroPlayback for proper handling.
 
 ```visual basic
     'If the process hasn't been found yet, resume with our legacy processID checks...
@@ -4245,7 +4234,7 @@ After tools, Process checks for legacy processIDs like paint, fill, and layer/te
 
 ---
 
-MiniProcess_NDFX_MacroPlayback parses macro parameters to get an action ID and value, then sets the right property on the active layer. If it's a text layer and useTextMode is set, it updates a text property; otherwise, it sets a generic layer property.
+MiniProcess_NDFX_MacroPlayback parses the macro parameters to get the action ID and value, then sets the property on the active layer. If useTextMode is set and the layer is text, it updates a text property; otherwise, it sets a generic property.
 
 ```visual basic
 Private Sub MiniProcess_NDFX_MacroPlayback(ByRef srcProcData As PD_ProcessCall, Optional ByVal useTextMode As Boolean = False)
@@ -4281,7 +4270,7 @@ End Sub
 
 ---
 
-After handling all known processIDs, Process checks for unknown ones. If it can't parse the ID, it shows a message box via Interface.bas, prompting the user to report the bug.
+After macro playback, Process handles special cases like rasterization and selection removal with dedicated checks. If an unknown processID slips through, we show an error message so the user can report it.
 
 ```visual basic
         'DEBUG FAILSAFE
@@ -4303,7 +4292,7 @@ After handling all known processIDs, Process checks for unknown ones. If it can'
 
 ---
 
-PDMsgBox translates the message and title if needed, replaces any dynamic placeholders, manages the cursor, and tries to show a custom dialog. If that fails, it falls back to the system MsgBox. This keeps error messages readable and localized.
+PDMsgBox replaces placeholders with values, translates the message and title if needed, tries to show a custom dialog, and falls back to MsgBox if that fails. Cursor state is saved and restored around the dialog.
 
 ```visual basic
 Public Function PDMsgBox(ByVal pMessage As String, ByVal pButtons As VbMsgBoxStyle, ByVal pTitle As String, ParamArray ExtraText() As Variant) As VbMsgBoxResult
@@ -4361,7 +4350,7 @@ End Function
 
 ---
 
-After handling all processIDs, Process optionally reports how long the action took if timing is enabled and the action modified the image. This helps with performance tracking and debugging.
+After all handler checks, Process wraps up by timing the action if needed and reporting it. This helps track performance for image-modifying actions.
 
 ```visual basic
     'End of special processID checks
@@ -4387,7 +4376,7 @@ After handling all processIDs, Process optionally reports how long the action to
 
 ---
 
-ReportProcessorTimeTaken calculates the elapsed time, builds a localized message string, and shows it to the user. This gives immediate feedback on how long the action took.
+ReportProcessorTimeTaken figures out how long the action took, formats the time, and shows it as a localized message. Only shown for image-modifying actions if timing is enabled.
 
 ```visual basic
 Public Sub ReportProcessorTimeTaken(ByVal srcStartTime As Currency)
@@ -4410,7 +4399,7 @@ End Sub
 
 ---
 
-After timing, Process finalizes undo/redo for the action.
+After timing, Process calls FinalizeUndoRedoState to push undo/redo entries or roll back if the action was canceled. This keeps the undo stack in sync with what just happened.
 
 ```visual basic
     'If the current image has been modified, notify the interface manager of the change.  It will handle things like generating
@@ -4433,27 +4422,41 @@ After timing, Process finalizes undo/redo for the action.
 
 </SwmSnippet>
 
-## Undo/Redo Finalization and Cancellation Handling
+## Finalizing Undo/Redo State
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Finalize undo/redo state after user action"] --> node2{"Was the action canceled? (cancel trigger)"}
+    node1["Finalize undo/redo after processing action"] --> node2{"Was the action canceled?"}
     click node1 openCode "Modules/Processor.bas:1290:1292"
-    click node2 openCode "Modules/Processor.bas:1293:1294"
-    node2 -->|"Yes"| node3["Reset interface and cancel trigger"]
-    click node3 openCode "Modules/Processor.bas:1295:1300"
-    node2 -->|"No"| node4{"Eligible for undo/redo? (undo type, macro status, recorded status)"}
-    click node4 openCode "Modules/Processor.bas:1306:1312"
-    node4 -->|"Yes"| node5{"Is action 'Fade'?"}
-    click node5 openCode "Modules/Processor.bas:1329:1332"
-    node5 -->|"Yes"| node7["Handle 'Fade' layer for undo"]
-    click node7 openCode "Modules/Processor.bas:1330:1332"
-    node5 -->|"No"| node6["Record current image state for undo/redo"]
-    click node6 openCode "Modules/Processor.bas:1334:1335"
-    node7 --> node6
-    node4 -->|"No"| node8["No undo/redo entry created"]
-    click node8 openCode "Modules/Processor.bas:1338:1340"
+    node2 -->|"Yes"| node3["Reset progress bar and notify user"]
+    click node2 openCode "Modules/Processor.bas:1293:1297"
+    node3 --> node4["Reset cancel trigger"]
+    click node3 openCode "Modules/Processor.bas:1299:1300"
+    node2 -->|"No"| node5{"Should we record undo data?"}
+    click node4 openCode "Modules/Processor.bas:1299:1300"
+    node5 -->|"Yes"| node6{"Is image active?"}
+    click node5 openCode "Modules/Processor.bas:1312:1313"
+    node6 -->|"Yes"| node7{"Which layer is affected?"}
+    click node6 openCode "Modules/Processor.bas:1313:1324"
+    node7 -->|"Selection"| node8["Set affected layer to none"]
+    click node7 openCode "Modules/Processor.bas:1320:1322"
+    node7 -->|"Other"| node9["Get active layer ID"]
+    click node9 openCode "Modules/Processor.bas:1323:1324"
+    node8 --> node10{"Is action 'Fade'?"}
+    node9 --> node10
+    click node8 openCode "Modules/Processor.bas:1320:1322"
+    click node10 openCode "Modules/Processor.bas:1329:1332"
+    node10 -->|"Yes"| node11["Prepare undo copy for 'Fade'"]
+    node10 -->|"No"| node12["Create undo data"]
+    click node11 openCode "Modules/Processor.bas:1331:1332"
+    node11 --> node12
+    click node12 openCode "Modules/Processor.bas:1335:1336"
+    node6 -->|"No"| node13["End"]
+    click node13 openCode "Modules/Processor.bas:1313:1337"
+    node5 -->|"No"| node14["End"]
+    click node14 openCode "Modules/Processor.bas:1312:1339"
+
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -4461,7 +4464,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In FinalizeUndoRedoState, if the user cancels the action, we reset progress bars, show a cancellation message, and clear the cancel flag. This keeps the UI and workflow clean after a canceled operation.
+In FinalizeUndoRedoState, if the user canceled, we release progress bars, show a cancellation message, and reset the cancel flag so the next action can be canceled if needed.
 
 ```visual basic
 Private Sub FinalizeUndoRedoState(ByRef srcProcData As PD_ProcessCall, ByRef targetImage As pdImage)
@@ -4483,7 +4486,7 @@ Private Sub FinalizeUndoRedoState(ByRef srcProcData As PD_ProcessCall, ByRef tar
 
 ---
 
-After handling cancellation, FinalizeUndoRedoState checks if undo data should be created. It picks the right layer (handling selection and fade cases), then calls the UndoManager to create the entry. Undo/redo is skipped during macro playback.
+If the action wasn't canceled and it modified the image, FinalizeUndoRedoState figures out which layer to use, handles special cases like 'Fade', and pushes undo data so the user can revert changes.
 
 ```visual basic
         'Reset the cancel trigger; if this is not done, the user will not be able to cancel subsequent actions.
@@ -4536,54 +4539,52 @@ End Sub
 
 </SwmSnippet>
 
-## UI State Restoration and Final Sync
+## Final UI and State Cleanup
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Finalize UI updates after processing"] --> node2{"Was undo action performed?"}
+    node1["Finalize processing and mark processor as idle"]
     click node1 openCode "Modules/Processor.bas:356:359"
-    node2 -->|"Yes"| node3["Return focus to active image"]
+    node1 --> node2{"Was an undo action performed?"}
     click node2 openCode "Modules/Processor.bas:362:363"
-    node2 -->|"No"| node4{"Is macro batch processing active?"}
+    node2 -->|"Yes"| node3["Return focus to active image"]
+    click node3 openCode "Modules/Processor.bas:363:363"
+    node2 -->|"No"| node4{"Was a macro batch running?"}
     click node4 openCode "Modules/Processor.bas:370:383"
-    node4 -->|"Yes"| node8["Restore main form and controls"]
-    node4 -->|"No"| node5{"Was dialog raised?"}
+    node4 -->|"No"| node5{"Was a dialog raised and not canceled?"}
     click node5 openCode "Modules/Processor.bas:373:376"
-    node5 -->|"Yes"| node6{"Was dialog canceled?"}
-    click node6 openCode "Modules/Processor.bas:376:377"
-    node6 -->|"No"| node7["Sync UI to current image"]
-    click node7 openCode "Modules/Processor.bas:376:377"
-    node6 -->|"Yes"| node8["Restore main form and controls"]
-    node5 -->|"No"| node7
-    node3 --> node8["Restore main form and controls"]
-    click node8 openCode "Modules/Processor.bas:389:389"
-    node7 --> node8
-    node8 --> node9{"Is update available?"}
-    click node9 openCode "Modules/Processor.bas:392:392"
-    node9 -->|"Yes"| node10["Display update notification"]
+    node5 -->|"Yes"| node6["Sync UI to current image"]
+    click node6 openCode "Modules/Processor.bas:376:376"
+    node5 -->|"No"| node7["Sync UI to current image"]
+    click node7 openCode "Modules/Processor.bas:380:380"
+    node4 -->|"Yes"| node8["Skip UI sync"]
+    click node8 openCode "Modules/Processor.bas:383:383"
+    node3 --> node9["Restore main form and UI state"]
+    click node9 openCode "Modules/Processor.bas:389:389"
+    node6 --> node9
+    node7 --> node9
+    node8 --> node9
+    node9 --> node10{"Is update ready to install?"}
     click node10 openCode "Modules/Processor.bas:392:392"
-    node9 -->|"No"| node11["Log process timing"]
-    node10 --> node11
-    click node11 openCode "Modules/Processor.bas:395:396"
-    node11 --> node12{"Did error occur?"}
-    click node12 openCode "Modules/Processor.bas:402:440"
-    node12 -->|"No"| node19["End"]
-    node12 -->|"Yes"| node13{"Error type?"}
-    node13 -->|"Error number 0"| node15["Ignore error"]
-    click node15 openCode "Modules/Processor.bas:416:419"
-    node13 -->|"Object unloaded"| node16["Ignore error"]
-    click node16 openCode "Modules/Processor.bas:422:425"
-    node13 -->|"Out of memory"| node14["Show out of memory message"]
-    click node14 openCode "Modules/Processor.bas:428:431"
-    node13 -->|"Unknown error"| node17["Show unknown error message"]
-    click node17 openCode "Modules/Processor.bas:435:439"
-    node17 --> node18{"User agrees to file bug report?"}
-    click node18 openCode "Modules/Processor.bas:446:447"
-    node18 -->|"Yes"| node20["Guide user to bug report"]
-    click node20 openCode "Modules/Processor.bas:1345:1353"
-    node18 -->|"No"| node19["End"]
-    click node19 openCode "Modules/Processor.bas:398:398"
+    node10 -->|"Yes"| node11["Display update notification"]
+    click node11 openCode "Modules/Processor.bas:392:392"
+    node10 -->|"No"| node12["Log processing time"]
+    click node12 openCode "Modules/Processor.bas:395:396"
+    node11 --> node12
+    node12 --> node13["Exit"]
+    click node13 openCode "Modules/Processor.bas:398:398"
+    
+    %% Error handling path
+    node14["If an error occurs: Restore UI, sync interface, and show error details"]
+    click node14 openCode "Modules/Processor.bas:402:443"
+    node14 --> node15{"User agrees to file bug report?"}
+    click node15 openCode "Modules/Processor.bas:446:446"
+    node15 -->|"Yes"| node16["Guide user to file bug report"]
+    click node16 openCode "Modules/Processor.bas:1345:1353"
+    node15 -->|"No"| node17["Exit"]
+    click node17 openCode "Modules/Processor.bas:448:448"
+
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -4591,7 +4592,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After undo/redo, Process restores the UI to idle, re-enables user interaction, and syncs the interface if needed. This keeps the app responsive and up-to-date after any action.
+After undo/redo is done, Process marks the processor as idle, restores focus, and syncs the UI if needed. This keeps the interface in sync with the image state.
 
 ```visual basic
     'From this point onward, we're only going to be finalizing UI updates.  Some of these updates will not trigger
@@ -4657,7 +4658,7 @@ MainErrHandler:
 
 ---
 
-After restoring the UI, Process flushes any pending UI syncs and handles errors by showing localized messages. This keeps the interface consistent and gives users clear feedback if something goes wrong.
+After SetProcessorUI_Idle, Process flushes any pending UI syncs to make sure the interface matches the image state, especially if there was an error.
 
 ```visual basic
     'Ensure any pending UI syncs are flushed
@@ -4703,7 +4704,7 @@ After restoring the UI, Process flushes any pending UI syncs and handles errors 
 
 ---
 
-After coming back from Interface.bas, Process uses PDMsgBox to show a detailed, localized error message with all the relevant info.
+After returning from Modules/Interface.bas, Process uses PDMsgBox to show a detailed error dialog with the error number, description, and extra info. This leverages the custom dialog system for localization and macro support, and sets up the next step for user-driven bug reporting.
 
 ```visual basic
     'Create the message box to return the error information
@@ -4719,7 +4720,7 @@ After coming back from Interface.bas, Process uses PDMsgBox to show a detailed, 
 
 ---
 
-After returning from Interface.bas, Process checks the user's response to the error dialog. If they agree to file a bug report, it calls FileErrorReport with the error number, handing off the reporting flow.
+Back in Process, after showing the error dialog, we check if the user wants to file a bug report. If they agree, we call FileErrorReport to kick off the reporting flow. This keeps error handling interactive and user-driven.
 
 ```visual basic
     'If the message box return value is "Yes", the user is willing to file a bug report.
@@ -4736,7 +4737,7 @@ End Sub
 
 ---
 
-FileErrorReport opens the GitHub issues page in the user's browser so they can report a bug directly. Right after, it calls PDMsgBox from Interface.bas to show instructions, telling the user to include the error number in their report for easier debugging.
+FileErrorReport opens the GitHub issues page in the browser so the user can report a bug directly. Then it calls PDMsgBox to show instructions for submitting a bug report, including where to put the error number. This keeps the reporting flow clear and user-friendly.
 
 ```visual basic
 Private Sub FileErrorReport(ByVal errNumber As Long)

@@ -1,23 +1,29 @@
 ---
-title: Dispatching named actions
+title: Dispatching Actions by Name
 ---
-This document describes how action requests are dispatched in the photo editor. When a user or automation system requests an operation by name, the system checks if the request can be processed, then searches through all major categories of actions—tools, file operations, editing, image adjustments, effects, and more. If a matching action is found and permitted, the corresponding photo editing operation is performed. Otherwise, the request is declined.
+This document outlines how user-requested actions are processed and executed. When a user triggers an action by name, the system checks if it is allowed, searches through all supported categories, and executes the corresponding operation if recognized. If not, no action is performed. The flow receives an action name as input and produces the corresponding application behavior as output.
 
 ```mermaid
 flowchart TD
-  node1["Dispatching Actions by Name
-(Dispatching Actions by Name)"]:::HeadingStyle
+  node1["Dispatching Actions by Name"]:::HeadingStyle
   click node1 goToHeading "Dispatching Actions by Name"
-  node1 --> node2{"Is request permitted?"}
-  node2 -->|"Yes"| node3["Search action categories"]
-  node2 -->|"No"| node6["Request declined
-(Dispatching Actions by Name)"]:::HeadingStyle
-  click node6 goToHeading "Dispatching Actions by Name"
-  node3 --> node4{"Was action found?"}
-  node4 -->|"Yes"| node5["Action executed
-(Dispatching Actions by Name)"]:::HeadingStyle
-  click node5 goToHeading "Dispatching Actions by Name"
-  node4 -->|"No"| node6
+  node1 --> node2{"Is action allowed?"}
+  node2 -->|"No"| node5["No action performed"]
+  node2 -->|"Yes"| node3["Handling File Menu Commands"]:::HeadingStyle
+  click node3 goToHeading "Handling File Menu Commands"
+  click node3 goToHeading "Handling Edit Menu Commands"
+  click node3 goToHeading "Handling Image Menu Commands"
+  click node3 goToHeading "Handling Layer Menu Commands"
+  click node3 goToHeading "Trying Selection Menu Actions"
+  click node3 goToHeading "Trying Adjustment Menu Actions"
+  click node3 goToHeading "Trying Effect Menu Actions"
+  click node3 goToHeading "Handling Tool Menu Actions"
+  click node3 goToHeading "Trying View Menu Actions"
+  click node3 goToHeading "Handling Help Menu Actions"
+  click node3 goToHeading "Handling Miscellaneous Actions"
+  node3 --> node4{"Is action recognized?"}
+  node4 -->|"Yes"| node6["Action executed"]
+  node4 -->|"No"| node5
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -26,187 +32,105 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Receive action request"] --> node2{"Is program busy?"}
+    node1["User requests an action by name"] --> node2{"Is program busy?"}
     click node1 openCode "Modules/Actions.bas:104:109"
-    node2 -->|"Yes"| node17["Exit: Action not launched"]
+    node2 -->|"Yes"| node3["Action not launched"]
     click node2 openCode "Modules/Actions.bas:109:110"
-    node2 -->|"No"| node3{"Should validation be skipped?"}
-    click node17 openCode "Modules/Actions.bas:109:110"
-    node3 -->|"Yes"| node7["Search non-menu tool action"]
-    click node3 openCode "Modules/Actions.bas:118:132"
-    node3 -->|"No"| node4{"Is menu enabled for action?"}
-    click node4 openCode "Modules/Actions.bas:119:131"
-    node4 -->|"No"| node5{"Is menu a known exception?"}
-    click node5 openCode "Modules/Actions.bas:126:128"
-    node5 -->|"No"| node17
-    node5 -->|"Yes"| node7
-    node4 -->|"Yes"| node7
-    node7 --> node8{"Was action found?"}
-    click node7 openCode "Modules/Actions.bas:137:138"
-    node8 -->|"Yes"| node22["Action launched"]
-    click node22 openCode "Modules/Actions.bas:154:154"
-    node8 -->|"No"| node9["Handling File Menu Actions"]
+    node2 -->|"No"| node4{"Skip validation?"}
+    click node4 openCode "Modules/Actions.bas:118:132"
+    node4 -->|"Yes"| node5["Attempt quick actions (non-menu)"]
+    node4 -->|"No"| node6{"Is menu enabled and does it exist?"}
+    click node6 openCode "Modules/Actions.bas:115:132"
+    node6 -->|"No"| node5
+    node6 -->|"Yes"| node7{"Is action a known exception?"}
+    click node7 openCode "Modules/Actions.bas:126:128"
+    node7 -->|"Yes"| node5
+    node7 -->|"No"| node3
+    node5 --> node8{"Was action found in quick actions?"}
+    click node5 openCode "Modules/Actions.bas:137:138"
+    node8 -->|"Yes"| node18["Action launched"]
+    click node18 openCode "Modules/Actions.bas:154:154"
+    node8 -->|"No"| node9["Attempt to find action in menu groups"]
+    click node9 openCode "Modules/Actions.bas:140:152"
+    subgraph loop1["For each menu group: File, Edit, Image, Layer, Select, Adjustments, Effects, Tools, View, Window, Help, Misc"]
+        node9 --> node10{"Was action found in this group?"}
+        node10 -->|"Yes"| node18
+        node10 -->|"No"| node11["Handling Edit Actions and Parameters"]
+        
+        
+    end
+    node11 --> node12["Handling Image Actions"]
     
-    node9 --> node10{"Was action found?"}
-    node10 -->|"Yes"| node22
-    node10 -->|"No"| node11["Handling Edit Menu Actions"]
-    
-    node11 --> node12{"Was action found?"}
-    node12 -->|"Yes"| node22
-    node12 -->|"No"| node13["Handling Image Menu Actions"]
-    
-    node13 --> node14{"Was action found?"}
-    node14 -->|"Yes"| node22
-    node14 -->|"No"| node15["Handling Layer Menu Actions"]
-    
-    node15 --> node16{"Was action found?"}
-    node16 -->|"Yes"| node22
-    node16 -->|"No"| node18["Dispatching Selection Commands"]
-    
-    node18 --> node19{"Was action found?"}
-    node19 -->|"Yes"| node22
-    node19 -->|"No"| node20["Dispatching Adjustment Commands"]
-    
-    node20 --> node21{"Was action found?"}
-    node21 -->|"Yes"| node22
-    node21 -->|"No"| node23["Search Effects menu"]
-    click node23 openCode "Modules/Actions.bas:147:147"
-    node23 --> node24{"Was action found?"}
-    node24 -->|"Yes"| node22
-    node24 -->|"No"| node25["Dispatching Tool Commands"]
-    
-    node25 --> node26{"Was action found?"}
-    node26 -->|"Yes"| node22
-    node26 -->|"No"| node27["Search View menu"]
-    click node27 openCode "Modules/Actions.bas:149:149"
-    node27 --> node28{"Was action found?"}
-    node28 -->|"Yes"| node22
-    node28 -->|"No"| node29["Search Window menu"]
-    click node29 openCode "Modules/Actions.bas:150:150"
-    node29 --> node30{"Was action found?"}
-    node30 -->|"Yes"| node22
-    node30 -->|"No"| node31["Handling Help Menu Actions"]
-    
-    node31 --> node32{"Was action found?"}
-    node32 -->|"Yes"| node22
-    node32 -->|"No"| node33["Search Miscellaneous actions"]
-    click node33 openCode "Modules/Actions.bas:152:153"
-    node33 --> node34{"Was action found?"}
-    node34 -->|"Yes"| node22
-    node34 -->|"No"| node17
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
-click node9 goToHeading "Handling File Menu Actions"
-node9:::HeadingStyle
-click node11 goToHeading "Handling Edit Menu Actions"
+click node10 goToHeading "Handling File Menu Commands"
+node10:::HeadingStyle
+click node11 goToHeading "Handling Edit Actions and Parameters"
 node11:::HeadingStyle
-click node13 goToHeading "Handling Image Menu Actions"
+click node12 goToHeading "Handling Image Actions"
+node12:::HeadingStyle
+click node13 goToHeading "Handling Layer Actions"
 node13:::HeadingStyle
-click node15 goToHeading "Handling Layer Menu Actions"
+click node14 goToHeading "Handling Selection Commands"
+node14:::HeadingStyle
+click node15 goToHeading "Handling Image Adjustments"
 node15:::HeadingStyle
-click node18 goToHeading "Dispatching Selection Commands"
-node18:::HeadingStyle
-click node20 goToHeading "Dispatching Adjustment Commands"
-node20:::HeadingStyle
-click node25 goToHeading "Dispatching Tool Commands"
-node25:::HeadingStyle
-click node31 goToHeading "Handling Help Menu Actions"
-node31:::HeadingStyle
+click node17 goToHeading "Handling Tool Menu Actions"
+node17:::HeadingStyle
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["Receive action request"] --> node2{"Is program busy?"}
+%%     node1["User requests an action by name"] --> node2{"Is program busy?"}
 %%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:104:109"
-%%     node2 -->|"Yes"| node17["Exit: Action not launched"]
+%%     node2 -->|"Yes"| node3["Action not launched"]
 %%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:109:110"
-%%     node2 -->|"No"| node3{"Should validation be skipped?"}
-%%     click node17 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:109:110"
-%%     node3 -->|"Yes"| node7["Search non-menu tool action"]
-%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:118:132"
-%%     node3 -->|"No"| node4{"Is menu enabled for action?"}
-%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:119:131"
-%%     node4 -->|"No"| node5{"Is menu a known exception?"}
-%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:126:128"
-%%     node5 -->|"No"| node17
-%%     node5 -->|"Yes"| node7
-%%     node4 -->|"Yes"| node7
-%%     node7 --> node8{"Was action found?"}
-%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:137:138"
-%%     node8 -->|"Yes"| node22["Action launched"]
-%%     click node22 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:154:154"
-%%     node8 -->|"No"| node9["Handling File Menu Actions"]
+%%     node2 -->|"No"| node4{"Skip validation?"}
+%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:118:132"
+%%     node4 -->|"Yes"| node5["Attempt quick actions (non-menu)"]
+%%     node4 -->|"No"| node6{"Is menu enabled and does it exist?"}
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:115:132"
+%%     node6 -->|"No"| node5
+%%     node6 -->|"Yes"| node7{"Is action a known exception?"}
+%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:126:128"
+%%     node7 -->|"Yes"| node5
+%%     node7 -->|"No"| node3
+%%     node5 --> node8{"Was action found in quick actions?"}
+%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:137:138"
+%%     node8 -->|"Yes"| node18["Action launched"]
+%%     click node18 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:154:154"
+%%     node8 -->|"No"| node9["Attempt to find action in menu groups"]
+%%     click node9 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:140:152"
+%%     subgraph loop1["For each menu group: File, Edit, Image, Layer, Select, Adjustments, Effects, Tools, View, Window, Help, Misc"]
+%%         node9 --> node10{"Was action found in this group?"}
+%%         node10 -->|"Yes"| node18
+%%         node10 -->|"No"| node11["Handling Edit Actions and Parameters"]
+%%         
+%%         
+%%     end
+%%     node11 --> node12["Handling Image Actions"]
 %%     
-%%     node9 --> node10{"Was action found?"}
-%%     node10 -->|"Yes"| node22
-%%     node10 -->|"No"| node11["Handling Edit Menu Actions"]
-%%     
-%%     node11 --> node12{"Was action found?"}
-%%     node12 -->|"Yes"| node22
-%%     node12 -->|"No"| node13["Handling Image Menu Actions"]
-%%     
-%%     node13 --> node14{"Was action found?"}
-%%     node14 -->|"Yes"| node22
-%%     node14 -->|"No"| node15["Handling Layer Menu Actions"]
-%%     
-%%     node15 --> node16{"Was action found?"}
-%%     node16 -->|"Yes"| node22
-%%     node16 -->|"No"| node18["Dispatching Selection Commands"]
-%%     
-%%     node18 --> node19{"Was action found?"}
-%%     node19 -->|"Yes"| node22
-%%     node19 -->|"No"| node20["Dispatching Adjustment Commands"]
-%%     
-%%     node20 --> node21{"Was action found?"}
-%%     node21 -->|"Yes"| node22
-%%     node21 -->|"No"| node23["Search Effects menu"]
-%%     click node23 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:147:147"
-%%     node23 --> node24{"Was action found?"}
-%%     node24 -->|"Yes"| node22
-%%     node24 -->|"No"| node25["Dispatching Tool Commands"]
-%%     
-%%     node25 --> node26{"Was action found?"}
-%%     node26 -->|"Yes"| node22
-%%     node26 -->|"No"| node27["Search View menu"]
-%%     click node27 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:149:149"
-%%     node27 --> node28{"Was action found?"}
-%%     node28 -->|"Yes"| node22
-%%     node28 -->|"No"| node29["Search Window menu"]
-%%     click node29 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:150:150"
-%%     node29 --> node30{"Was action found?"}
-%%     node30 -->|"Yes"| node22
-%%     node30 -->|"No"| node31["Handling Help Menu Actions"]
-%%     
-%%     node31 --> node32{"Was action found?"}
-%%     node32 -->|"Yes"| node22
-%%     node32 -->|"No"| node33["Search Miscellaneous actions"]
-%%     click node33 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:152:153"
-%%     node33 --> node34{"Was action found?"}
-%%     node34 -->|"Yes"| node22
-%%     node34 -->|"No"| node17
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
-%% click node9 goToHeading "Handling File Menu Actions"
-%% node9:::HeadingStyle
-%% click node11 goToHeading "Handling Edit Menu Actions"
+%% click node10 goToHeading "Handling File Menu Commands"
+%% node10:::HeadingStyle
+%% click node11 goToHeading "Handling Edit Actions and Parameters"
 %% node11:::HeadingStyle
-%% click node13 goToHeading "Handling Image Menu Actions"
+%% click node12 goToHeading "Handling Image Actions"
+%% node12:::HeadingStyle
+%% click node13 goToHeading "Handling Layer Actions"
 %% node13:::HeadingStyle
-%% click node15 goToHeading "Handling Layer Menu Actions"
+%% click node14 goToHeading "Handling Selection Commands"
+%% node14:::HeadingStyle
+%% click node15 goToHeading "Handling Image Adjustments"
 %% node15:::HeadingStyle
-%% click node18 goToHeading "Dispatching Selection Commands"
-%% node18:::HeadingStyle
-%% click node20 goToHeading "Dispatching Adjustment Commands"
-%% node20:::HeadingStyle
-%% click node25 goToHeading "Dispatching Tool Commands"
-%% node25:::HeadingStyle
-%% click node31 goToHeading "Handling Help Menu Actions"
-%% node31:::HeadingStyle
+%% click node17 goToHeading "Handling Tool Menu Actions"
+%% node17:::HeadingStyle
 ```
 
 <SwmSnippet path="/Modules/Actions.bas" line="104">
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, we start by making sure the program isn't busy and that the requested menu action is enabled (unless validation is skipped or it's a known exception like <SwmToken path="Modules/Actions.bas" pos="126:17:17" line-data="                If (Not Strings.StringsEqualAny(srcMenuName, True, &quot;edit_pasteaslayer&quot;)) Then">`edit_pasteaslayer`</SwmToken>). If the menu is disabled and not an exception, we bail out early. Next, we try to handle <SwmToken path="Modules/Actions.bas" pos="137:23:25" line-data="    &#39;Before searching menu items, perform a &quot;quick&quot; search for UI-specific tool actions">`UI-specific`</SwmToken> tool actions by calling <SwmToken path="Modules/Actions.bas" pos="138:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_NonMenu(srcMenuName, actionSource)">`Launch_ByName_NonMenu`</SwmToken>. This lets us catch tool and quick actions that aren't part of the main menu system before we start searching through the menu command groups.
+In <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, we start by checking if the program is busy or if the menu action is allowed (enabled). If the menu is disabled, we bail out unless it's a known exception like <SwmToken path="Modules/Actions.bas" pos="126:17:17" line-data="                If (Not Strings.StringsEqualAny(srcMenuName, True, &quot;edit_pasteaslayer&quot;)) Then">`edit_pasteaslayer`</SwmToken>, which can remap to another task. Next, we try to find the command by searching <SwmToken path="Modules/Actions.bas" pos="137:23:25" line-data="    &#39;Before searching menu items, perform a &quot;quick&quot; search for UI-specific tool actions">`UI-specific`</SwmToken> tool actions using <SwmToken path="Modules/Actions.bas" pos="138:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_NonMenu(srcMenuName, actionSource)">`Launch_ByName_NonMenu`</SwmToken>, since these are often quick actions that don't need undo/redo and can be handled directly.
 
 ```visual basic
 Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean
@@ -255,7 +179,7 @@ Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal 
 
 ---
 
-<SwmToken path="Modules/Actions.bas" pos="1524:4:4" line-data="Private Function Launch_ByName_NonMenu(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_NonMenu`</SwmToken> checks if the command matches any quick tool property actions or tool activations, handling toggles for hotkey-triggered actions and some UI updates like cursor redraws. It also handles UI commands like focusing the search box. If the command is recognized and executed, it returns True; otherwise, it falls through and returns False.
+<SwmToken path="Modules/Actions.bas" pos="1524:4:4" line-data="Private Function Launch_ByName_NonMenu(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_NonMenu`</SwmToken> handles quick tool actions first, like changing brush hardness or size, by calling specific tool functions. It also activates tools based on the action name, and toggles between tools if triggered by a hotkey. For <SwmToken path="Modules/Actions.bas" pos="1624:4:4" line-data="        Case &quot;tool_search&quot;">`tool_search`</SwmToken>, it sets focus to the search box. If none of these match, it returns False so the caller can try other handlers.
 
 ```visual basic
 Private Function Launch_ByName_NonMenu(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -379,7 +303,7 @@ End Function
 
 ---
 
-Back in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if <SwmToken path="Modules/Actions.bas" pos="138:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_NonMenu(srcMenuName, actionSource)">`Launch_ByName_NonMenu`</SwmToken> didn't handle the command, we move on to <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuFile(srcMenuName, actionSource)">`Launch_ByName_MenuFile`</SwmToken> to check if it's a file menu action (like open, save, import, etc.). This keeps the search order logical: UI tools first, then file operations.
+Back in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, after checking <SwmToken path="Modules/Actions.bas" pos="137:23:25" line-data="    &#39;Before searching menu items, perform a &quot;quick&quot; search for UI-specific tool actions">`UI-specific`</SwmToken> tool actions, if nothing matched, we move on to <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuFile(srcMenuName, actionSource)">`Launch_ByName_MenuFile`</SwmToken> to see if the action is a file menu command. This keeps the search ordered by relevance.
 
 ```visual basic
     'Search each menu group in turn
@@ -390,13 +314,13 @@ Back in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Fun
 
 </SwmSnippet>
 
-## Handling File Menu Actions
+## Handling File Menu Commands
 
 <SwmSnippet path="/Modules/Actions.bas" line="169">
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="169:4:4" line-data="Private Function Launch_ByName_MenuFile(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuFile`</SwmToken>, we match the command name to known file menu actions. For each recognized action, we call Process to execute it (open, save, import, etc.). Some commands check if an image is active before proceeding. If the command isn't recognized, we set <SwmToken path="Modules/Actions.bas" pos="171:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> to False.
+In <SwmToken path="Modules/Actions.bas" pos="169:4:4" line-data="Private Function Launch_ByName_MenuFile(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuFile`</SwmToken>, we use a Select Case to match the action name to file menu commands. For each recognized command, we call Process or related functions. Some actions check for an active image before proceeding, and <SwmToken path="Modules/Actions.bas" pos="181:4:4" line-data="        Case &quot;file_openrecent&quot;">`file_openrecent`</SwmToken> behaves differently if triggered from search or hotkey. Next, we call Process to actually run the mapped operation.
 
 ```visual basic
 Private Function Launch_ByName_MenuFile(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -501,72 +425,74 @@ Private Function Launch_ByName_MenuFile(ByRef srcMenuName As String, Optional By
 
 </SwmSnippet>
 
-### Running the Action Processor
+### Processing Menu Actions
 
-See <SwmLink doc-title="User Action Processing Flow">[User Action Processing Flow](/.swm/user-action-processing-flow.tr3rkrqj.sw.md)</SwmLink>
+See <SwmLink doc-title="Processing User Actions and Applying Operations">[Processing User Actions and Applying Operations](/.swm/processing-user-actions-and-applying-operations.txdqw2cr.sw.md)</SwmLink>
 
-### Handling File Menu Dialogs and Cleanup
+### Post-Processing File Menu Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Receive menu command"] --> node2{"Is command recognized?"}
-    click node1 openCode "Modules/Actions.bas:265:277"
+    node1["User selects a file menu command"] --> node2{"Is command recognized?"}
+    click node1 openCode "Modules/Actions.bas:265:298"
     node2 -->|"Batch Repair"| node3["Show batch repair dialog"]
-    click node2 openCode "Modules/Actions.bas:265:266"
+    click node3 openCode "Modules/Actions.bas:265:266"
     node2 -->|"Print"| node4{"Is image active?"}
     click node4 openCode "Modules/Actions.bas:268:269"
     node4 -->|"Yes"| node5["Print image"]
     click node5 openCode "Modules/Actions.bas:269:270"
-    node4 -->|"No"| node6["No action taken"]
-    click node6 openCode "Modules/Actions.bas:268:270"
-    node2 -->|"Quit"| node7["Exit program"]
-    click node7 openCode "Modules/Actions.bas:272:273"
-    node2 -->|"Other"| node8{"Is command for recent file?"}
-    click node8 openCode "Modules/Actions.bas:279:284"
-    node8 -->|"Yes"| node9{"Does recent file exist?"}
-    click node9 openCode "Modules/Actions.bas:285:290"
+    node4 -->|"No"| node8["No action taken"]
+    click node8 openCode "Modules/Actions.bas:268:270"
+    node2 -->|"Quit"| node6["Exit program"]
+    click node6 openCode "Modules/Actions.bas:272:273"
+    node2 -->|"Other"| node7{"Is it a recent file command?"}
+    click node7 openCode "Modules/Actions.bas:284:285"
+    node7 -->|"Yes"| node9{"Does recent file exist?"}
+    click node9 openCode "Modules/Actions.bas:290:291"
     node9 -->|"Yes"| node10["Open recent file"]
     click node10 openCode "Modules/Actions.bas:290:291"
-    node9 -->|"No"| node6
-    node8 -->|"No"| node6
-    node3 --> node11["Return result"]
+    node9 -->|"No"| node8
+    node7 -->|"No"| node8
+    node3 --> node11["Return command found"]
     node5 --> node11
-    node7 --> node11
-    node10 --> node11
     node6 --> node11
-    click node11 openCode "Modules/Actions.bas:296:298"
+    node10 --> node11
+    node8 --> node11["Return command not found"]
+    click node11 openCode "Modules/Actions.bas:296:297"
+
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["Receive menu command"] --> node2{"Is command recognized?"}
-%%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:265:277"
+%%     node1["User selects a file menu command"] --> node2{"Is command recognized?"}
+%%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:265:298"
 %%     node2 -->|"Batch Repair"| node3["Show batch repair dialog"]
-%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:265:266"
+%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:265:266"
 %%     node2 -->|"Print"| node4{"Is image active?"}
 %%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:268:269"
 %%     node4 -->|"Yes"| node5["Print image"]
 %%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:269:270"
-%%     node4 -->|"No"| node6["No action taken"]
-%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:268:270"
-%%     node2 -->|"Quit"| node7["Exit program"]
-%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:272:273"
-%%     node2 -->|"Other"| node8{"Is command for recent file?"}
-%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:279:284"
-%%     node8 -->|"Yes"| node9{"Does recent file exist?"}
-%%     click node9 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:285:290"
+%%     node4 -->|"No"| node8["No action taken"]
+%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:268:270"
+%%     node2 -->|"Quit"| node6["Exit program"]
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:272:273"
+%%     node2 -->|"Other"| node7{"Is it a recent file command?"}
+%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:284:285"
+%%     node7 -->|"Yes"| node9{"Does recent file exist?"}
+%%     click node9 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:290:291"
 %%     node9 -->|"Yes"| node10["Open recent file"]
 %%     click node10 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:290:291"
-%%     node9 -->|"No"| node6
-%%     node8 -->|"No"| node6
-%%     node3 --> node11["Return result"]
+%%     node9 -->|"No"| node8
+%%     node7 -->|"No"| node8
+%%     node3 --> node11["Return command found"]
 %%     node5 --> node11
-%%     node7 --> node11
-%%     node10 --> node11
 %%     node6 --> node11
-%%     click node11 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:296:298"
+%%     node10 --> node11
+%%     node8 --> node11["Return command not found"]
+%%     click node11 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:296:297"
+%% 
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -574,7 +500,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuFile(srcMenuName, actionSource)">`Launch_ByName_MenuFile`</SwmToken> may show a dialog (like the batch repair dialog) if the action requires additional user input. This step handles UI interactions that follow the main file operation.
+Back in <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuFile(srcMenuName, actionSource)">`Launch_ByName_MenuFile`</SwmToken>, after running Process for batch repair, we show a modal dialog (<SwmToken path="Modules/Actions.bas" pos="265:6:6" line-data="                ShowPDDialog vbModal, FormBatchRepair">`FormBatchRepair`</SwmToken>) to let the user interact with the batch repair UI. This is needed for actions that require extra input.
 
 ```visual basic
                 ShowPDDialog vbModal, FormBatchRepair
@@ -594,7 +520,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="141:15
 
 ---
 
-After Interface, <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuFile(srcMenuName, actionSource)">`Launch_ByName_MenuFile`</SwmToken> calls Process again for commands like 'Exit program' to wrap up the action.
+After returning from the dialog in <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuFile(srcMenuName, actionSource)">`Launch_ByName_MenuFile`</SwmToken>, we call Process for 'Exit program' to handle shutting down the app, including cleanup and any final actions.
 
 ```visual basic
             Process "Exit program", True
@@ -614,7 +540,7 @@ After Interface, <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data=
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="296:1:1" line-data="    Launch_ByName_MenuFile = cmdFound">`Launch_ByName_MenuFile`</SwmToken> checks for recent file commands by looking for a special prefix. If found, it loads the recent file by index. The function returns True if any command was handled, otherwise False.
+At the end of <SwmToken path="Modules/Actions.bas" pos="296:1:1" line-data="    Launch_ByName_MenuFile = cmdFound">`Launch_ByName_MenuFile`</SwmToken>, if no command matched, we check for recent file commands by prefix, extract the index, and load the file if it exists. This lets us handle dynamic recent file menu items.
 
 ```visual basic
     'If we haven't found a match, look for commands related to the Recent Files menu;
@@ -643,13 +569,13 @@ End Function
 
 </SwmSnippet>
 
-## Chaining to Edit Menu Actions
+## Handling Edit Menu Commands
 
 <SwmSnippet path="/Modules/Actions.bas" line="142">
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuFile(srcMenuName, actionSource)">`Launch_ByName_MenuFile`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> tries <SwmToken path="Modules/Actions.bas" pos="142:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEdit(srcMenuName, actionSource)">`Launch_ByName_MenuEdit`</SwmToken> to see if the command matches an edit menu action. This keeps the search order logical: file actions first, then edit actions.
+Back in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if the action wasn't handled by file menu logic, we try <SwmToken path="Modules/Actions.bas" pos="142:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEdit(srcMenuName, actionSource)">`Launch_ByName_MenuEdit`</SwmToken> next to see if it's an edit menu command. This keeps the flow moving through relevant handlers.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEdit(srcMenuName, actionSource)
@@ -659,52 +585,102 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="141:15:15" line-d
 
 </SwmSnippet>
 
-## Handling Edit Menu Actions
+## Handling Edit Actions and Parameters
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects an Edit menu action"] --> node2{"Is an image open?"}
-    click node1 openCode "Modules/Actions.bas:300:404"
-    node2 -->|"Yes"| node3{"Which Edit action?"}
-    click node2 openCode "Modules/Actions.bas:304:312"
-    node2 -->|"No"| node4{"Is action one of: paste as layer, paste as image, special paste, empty clipboard?"}
-    click node4 openCode "Modules/Actions.bas:308:310"
-    node4 -->|"No"| node8["Action not performed"]
-    click node8 openCode "Modules/Actions.bas:309:310"
-    node4 -->|"Yes"| node3
-    node3 --> node5{"Does action require special context? (e.g., cut layer, paste to cursor)"}
-    click node3 openCode "Modules/Actions.bas:316:400"
-    node5 -->|"Yes"| node6["Check context and perform action accordingly"]
-    click node6 openCode "Modules/Actions.bas:338:343"
-    node5 -->|"No"| node7["Perform the requested Edit action"]
-    click node7 openCode "Modules/Actions.bas:319:396"
-    node6 --> node9["Return whether the action was found and executed"]
-    click node9 openCode "Modules/Actions.bas:402:403"
-    node7 --> node9
+  node1["Receive menu command (srcMenuName)"] --> node2{"Is an image open?"}
+  click node1 openCode "Modules/Actions.bas:300:316"
+  node2 -->|"Yes"| node3{"Which menu command?"}
+  click node2 openCode "Modules/Actions.bas:304:312"
+  node2 -->|"No"| node4{"Is command an exception (paste, special paste, empty clipboard)?"}
+  click node4 openCode "Modules/Actions.bas:308:310"
+  node4 -->|"Yes"| node3
+  node4 -->|"No"| node5["Exit without action"]
+  click node5 openCode "Modules/Actions.bas:309:310"
+  
+  node3 --> node6{"Is command 'cut layer'?"}
+  click node3 openCode "Modules/Actions.bas:316:400"
+  node6 -->|"Yes"| node7{"Is selection active?"}
+  node6 -->|"No"| node8{"Is command 'paste as layer'?"}
+  click node6 openCode "Modules/Actions.bas:338:343"
+  node7 -->|"Yes"| node9["Cut selection"]
+  click node7 openCode "Modules/Actions.bas:339:340"
+  node7 -->|"No"| node10["Cut entire layer"]
+  click node10 openCode "Modules/Actions.bas:341:342"
+  node9 --> node11["Return whether command was found"]
+  node10 --> node11
+  node8 -->|"Yes"| node12{"Is image open?"}
+  node8 -->|"No"| node13{"Is command 'paste to cursor'?"}
+  click node8 openCode "Modules/Actions.bas:354:359"
+  node12 -->|"Yes"| node14["Paste as layer"]
+  node12 -->|"No"| node15["Paste as new image"]
+  click node12 openCode "Modules/Actions.bas:355:358"
+  node14 --> node11
+  node15 --> node11
+  node13 -->|"Yes"| node16{"Is actionSource hotkey?"}
+  node13 -->|"No"| node17["Execute edit action"]
+  click node13 openCode "Modules/Actions.bas:361:366"
+  node16 -->|"Yes"| node18["Paste to cursor"]
+  node16 -->|"No"| node19["Paste"]
+  click node16 openCode "Modules/Actions.bas:362:365"
+  node18 --> node11
+  node19 --> node11
+  node17 --> node11
+  node8 -->|"No"| node17
+  node3 --> node17
+  node17 --> node11["Return whether command was found"]
+  click node11 openCode "Modules/Actions.bas:402:404"
+
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["User selects an Edit menu action"] --> node2{"Is an image open?"}
-%%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:300:404"
-%%     node2 -->|"Yes"| node3{"Which Edit action?"}
-%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:304:312"
-%%     node2 -->|"No"| node4{"Is action one of: paste as layer, paste as image, special paste, empty clipboard?"}
-%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:308:310"
-%%     node4 -->|"No"| node8["Action not performed"]
-%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:309:310"
-%%     node4 -->|"Yes"| node3
-%%     node3 --> node5{"Does action require special context? (<SwmToken path="Modules/Actions.bas" pos="160:30:32" line-data="    &#39; but choose not to execute it because certain safety conditions aren&#39;t met (e.g. Ctrl+S is pressed, but no">`e.g`</SwmToken>., cut layer, paste to cursor)"}
-%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:316:400"
-%%     node5 -->|"Yes"| node6["Check context and perform action accordingly"]
-%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:338:343"
-%%     node5 -->|"No"| node7["Perform the requested Edit action"]
-%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:319:396"
-%%     node6 --> node9["Return whether the action was found and executed"]
-%%     click node9 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:402:403"
-%%     node7 --> node9
+%%   node1["Receive menu command (<SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken>)"] --> node2{"Is an image open?"}
+%%   click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:300:316"
+%%   node2 -->|"Yes"| node3{"Which menu command?"}
+%%   click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:304:312"
+%%   node2 -->|"No"| node4{"Is command an exception (paste, special paste, empty clipboard)?"}
+%%   click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:308:310"
+%%   node4 -->|"Yes"| node3
+%%   node4 -->|"No"| node5["Exit without action"]
+%%   click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:309:310"
+%%   
+%%   node3 --> node6{"Is command 'cut layer'?"}
+%%   click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:316:400"
+%%   node6 -->|"Yes"| node7{"Is selection active?"}
+%%   node6 -->|"No"| node8{"Is command 'paste as layer'?"}
+%%   click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:338:343"
+%%   node7 -->|"Yes"| node9["Cut selection"]
+%%   click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:339:340"
+%%   node7 -->|"No"| node10["Cut entire layer"]
+%%   click node10 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:341:342"
+%%   node9 --> node11["Return whether command was found"]
+%%   node10 --> node11
+%%   node8 -->|"Yes"| node12{"Is image open?"}
+%%   node8 -->|"No"| node13{"Is command 'paste to cursor'?"}
+%%   click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:354:359"
+%%   node12 -->|"Yes"| node14["Paste as layer"]
+%%   node12 -->|"No"| node15["Paste as new image"]
+%%   click node12 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:355:358"
+%%   node14 --> node11
+%%   node15 --> node11
+%%   node13 -->|"Yes"| node16{"Is <SwmToken path="Modules/Actions.bas" pos="104:19:19" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`actionSource`</SwmToken> hotkey?"}
+%%   node13 -->|"No"| node17["Execute edit action"]
+%%   click node13 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:361:366"
+%%   node16 -->|"Yes"| node18["Paste to cursor"]
+%%   node16 -->|"No"| node19["Paste"]
+%%   click node16 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:362:365"
+%%   node18 --> node11
+%%   node19 --> node11
+%%   node17 --> node11
+%%   node8 -->|"No"| node17
+%%   node3 --> node17
+%%   node17 --> node11["Return whether command was found"]
+%%   click node11 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:402:404"
+%% 
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -712,7 +688,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="300:4:4" line-data="Private Function Launch_ByName_MenuEdit(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuEdit`</SwmToken>, we check if an image is active (except for a few exceptions). Then we match the command to edit actions like undo, redo, cut, paste, etc., and call Process with the right parameters. Paste actions can use mouse coordinates if triggered by a hotkey. If the command isn't recognized, <SwmToken path="Modules/Actions.bas" pos="314:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> is set to False.
+In <SwmToken path="Modules/Actions.bas" pos="300:4:4" line-data="Private Function Launch_ByName_MenuEdit(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuEdit`</SwmToken>, we check if an image is active for most actions, except a few like paste or empty clipboard. Then we match the action name to edit commands, calling Process with the right parameters. For cut actions, we pick the undo type based on whether a selection is active. If the command isn't recognized, we return False.
 
 ```visual basic
 Private Function Launch_ByName_MenuEdit(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -789,7 +765,7 @@ Private Function Launch_ByName_MenuEdit(ByRef srcMenuName As String, Optional By
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="142:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEdit(srcMenuName, actionSource)">`Launch_ByName_MenuEdit`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="363:15:15" line-data="                Process &quot;Paste to cursor&quot;, False, BuildParamList(&quot;canvas-mouse-x&quot;, FormMain.MainCanvas(0).GetLastMouseX(), &quot;canvas-mouse-y&quot;, FormMain.MainCanvas(0).GetLastMouseY()), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> to package mouse coordinates for paste-to-cursor actions. This lets the paste operation know where to place the content.
+Back in <SwmToken path="Modules/Actions.bas" pos="142:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEdit(srcMenuName, actionSource)">`Launch_ByName_MenuEdit`</SwmToken>, after handling paste actions, we use <SwmToken path="Modules/Actions.bas" pos="363:15:15" line-data="                Process &quot;Paste to cursor&quot;, False, BuildParamList(&quot;canvas-mouse-x&quot;, FormMain.MainCanvas(0).GetLastMouseX(), &quot;canvas-mouse-y&quot;, FormMain.MainCanvas(0).GetLastMouseY()), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> to package mouse coordinates for 'paste to cursor' when triggered by a hotkey. This lets us paste content exactly where the user clicked.
 
 ```visual basic
                 Process "Paste to cursor", False, BuildParamList("canvas-mouse-x", FormMain.MainCanvas(0).GetLastMouseX(), "canvas-mouse-y", FormMain.MainCanvas(0).GetLastMouseY()), UNDO_Image_VectorSafe
@@ -810,7 +786,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="142:15
 
 ---
 
-<SwmToken path="Modules/TextSupport.bas" pos="309:4:4" line-data="Public Function BuildParamList(ParamArray allParams() As Variant) As String">`BuildParamList`</SwmToken> takes <SwmToken path="Modules/TextSupport.bas" pos="324:16:18" line-data="            &#39;Parameters must be passed in a strict name/value order.  An odd number of parameters will cause crashes.">`name/value`</SwmToken> pairs, serializes them using <SwmToken path="Modules/TextSupport.bas" pos="311:2:2" line-data="    &#39;pdSerialize handles all the messy work for us">`pdSerialize`</SwmToken>, and returns the result. If you pass an odd number of parameters, it errors out to avoid broken parameter strings.
+<SwmToken path="Modules/TextSupport.bas" pos="309:4:4" line-data="Public Function BuildParamList(ParamArray allParams() As Variant) As String">`BuildParamList`</SwmToken> takes <SwmToken path="Modules/TextSupport.bas" pos="324:16:18" line-data="            &#39;Parameters must be passed in a strict name/value order.  An odd number of parameters will cause crashes.">`name/value`</SwmToken> pairs from a <SwmToken path="Modules/TextSupport.bas" pos="309:6:6" line-data="Public Function BuildParamList(ParamArray allParams() As Variant) As String">`ParamArray`</SwmToken>, adds them to a <SwmToken path="Modules/TextSupport.bas" pos="311:2:2" line-data="    &#39;pdSerialize handles all the messy work for us">`pdSerialize`</SwmToken> instance, and returns a serialized string. If you pass an odd number of parameters, it throws an error.
 
 ```visual basic
 Public Function BuildParamList(ParamArray allParams() As Variant) As String
@@ -864,7 +840,7 @@ End Function
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="363:15:15" line-data="                Process &quot;Paste to cursor&quot;, False, BuildParamList(&quot;canvas-mouse-x&quot;, FormMain.MainCanvas(0).GetLastMouseX(), &quot;canvas-mouse-y&quot;, FormMain.MainCanvas(0).GetLastMouseY()), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="402:1:1" line-data="    Launch_ByName_MenuEdit = cmdFound">`Launch_ByName_MenuEdit`</SwmToken> finishes dispatching edit actions to Process. If the command isn't recognized, it returns False so the next menu group can be checked.
+After returning from <SwmToken path="Modules/Actions.bas" pos="363:15:15" line-data="                Process &quot;Paste to cursor&quot;, False, BuildParamList(&quot;canvas-mouse-x&quot;, FormMain.MainCanvas(0).GetLastMouseX(), &quot;canvas-mouse-y&quot;, FormMain.MainCanvas(0).GetLastMouseY()), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="402:1:1" line-data="    Launch_ByName_MenuEdit = cmdFound">`Launch_ByName_MenuEdit`</SwmToken> finishes by calling Process for each edit action, like fill or stroke. If the action isn't matched, <SwmToken path="Modules/Actions.bas" pos="398:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> is set to False so the flow can continue.
 
 ```visual basic
         'The cut/copy/paste special menus allow the user to specify the format used for cut/copy/paste
@@ -907,13 +883,13 @@ End Function
 
 </SwmSnippet>
 
-## Chaining to Image Menu Actions
+## Handling Image Menu Commands
 
 <SwmSnippet path="/Modules/Actions.bas" line="143">
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="142:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEdit(srcMenuName, actionSource)">`Launch_ByName_MenuEdit`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> tries <SwmToken path="Modules/Actions.bas" pos="143:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuImage(srcMenuName, actionSource)">`Launch_ByName_MenuImage`</SwmToken> to see if the command matches an image menu action. This keeps the search order logical: file, edit, then image actions.
+Back in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if edit menu logic didn't handle the action, we try <SwmToken path="Modules/Actions.bas" pos="143:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuImage(srcMenuName, actionSource)">`Launch_ByName_MenuImage`</SwmToken> next to see if it's an image menu command. This keeps the flow moving through relevant handlers.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuImage(srcMenuName, actionSource)
@@ -923,46 +899,42 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="142:15:15" line-d
 
 </SwmSnippet>
 
-## Handling Image Menu Actions
+## Handling Image Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects an image menu action"] --> node2{"Is an image open?"}
-    click node1 openCode "Modules/Actions.bas:406:410"
-    node2 -->|"No"| node3["No action taken"]
-    click node2 openCode "Modules/Actions.bas:409:409"
-    node2 -->|"Yes"| node4{"Is the menu command recognized?"}
-    click node3 openCode "Modules/Actions.bas:409:409"
-    node4 -->|"Yes"| node5["Perform the requested image operation (resize, crop, rotate, etc.)"]
-    click node4 openCode "Modules/Actions.bas:413:485"
-    node4 -->|"No"| node6["Show error: Command not found"]
-    click node5 openCode "Modules/Actions.bas:413:485"
-    click node6 openCode "Modules/Actions.bas:493:495"
-    node5 --> node7["Return success"]
-    node6 --> node8["Return failure"]
-    click node7 openCode "Modules/Actions.bas:498:499"
-    click node8 openCode "Modules/Actions.bas:498:499"
+    node1["User requests image operation from menu"] --> node2{"Is an image open?"}
+    click node1 openCode "Modules/Actions.bas:406:409"
+    click node2 openCode "Modules/Actions.bas:409:410"
+    node2 -->|"No"| node6["Return failure"]
+    click node6 openCode "Modules/Actions.bas:409:410"
+    node2 -->|"Yes"| node3{"Which menu command was requested?"}
+    click node3 openCode "Modules/Actions.bas:413:494"
+    node3 -->|"Recognized command"| node4["Execute corresponding image operation"]
+    click node4 openCode "Modules/Actions.bas:415:492"
+    node3 -->|"Unrecognized command"| node6
+    node4 --> node5["Return success"]
+    click node5 openCode "Modules/Actions.bas:498:499"
+
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["User selects an image menu action"] --> node2{"Is an image open?"}
-%%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:406:410"
-%%     node2 -->|"No"| node3["No action taken"]
-%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:409:409"
-%%     node2 -->|"Yes"| node4{"Is the menu command recognized?"}
-%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:409:409"
-%%     node4 -->|"Yes"| node5["Perform the requested image operation (resize, crop, rotate, etc.)"]
-%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:413:485"
-%%     node4 -->|"No"| node6["Show error: Command not found"]
-%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:413:485"
-%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:493:495"
-%%     node5 --> node7["Return success"]
-%%     node6 --> node8["Return failure"]
-%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:498:499"
-%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:498:499"
+%%     node1["User requests image operation from menu"] --> node2{"Is an image open?"}
+%%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:406:409"
+%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:409:410"
+%%     node2 -->|"No"| node6["Return failure"]
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:409:410"
+%%     node2 -->|"Yes"| node3{"Which menu command was requested?"}
+%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:413:494"
+%%     node3 -->|"Recognized command"| node4["Execute corresponding image operation"]
+%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:415:492"
+%%     node3 -->|"Unrecognized command"| node6
+%%     node4 --> node5["Return success"]
+%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:498:499"
+%% 
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -970,7 +942,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="406:4:4" line-data="Private Function Launch_ByName_MenuImage(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuImage`</SwmToken>, we check for an active image, then match the command to image actions like resize, crop, rotate, etc., and call Process with the right parameters. If the command isn't recognized, <SwmToken path="Modules/Actions.bas" pos="411:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> is set to False.
+In <SwmToken path="Modules/Actions.bas" pos="406:4:4" line-data="Private Function Launch_ByName_MenuImage(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuImage`</SwmToken>, we check for an active image before running any action. Then we match the action name to image operations like resize or rotate, calling Process with the right parameters. If no image is open, we exit early.
 
 ```visual basic
 Private Function Launch_ByName_MenuImage(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -1006,7 +978,7 @@ Private Function Launch_ByName_MenuImage(ByRef srcMenuName As String, Optional B
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="143:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuImage(srcMenuName, actionSource)">`Launch_ByName_MenuImage`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="428:19:19" line-data="            Process &quot;Fit canvas to active layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, PDImages.GetActiveImage.GetActiveLayerIndex), UNDO_ImageHeader">`BuildParamList`</SwmToken> to serialize parameters for actions like fitting the canvas to a layer. This lets the operation know which layer to use.
+Back in <SwmToken path="Modules/Actions.bas" pos="143:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuImage(srcMenuName, actionSource)">`Launch_ByName_MenuImage`</SwmToken>, after running Process for actions like 'fit canvas to layer', we use <SwmToken path="Modules/Actions.bas" pos="428:19:19" line-data="            Process &quot;Fit canvas to active layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, PDImages.GetActiveImage.GetActiveLayerIndex), UNDO_ImageHeader">`BuildParamList`</SwmToken> to package parameters like the target layer index. This ensures the operation has the info it needs.
 
 ```visual basic
             Process "Fit canvas to active layer", False, BuildParamList("targetlayer", PDImages.GetActiveImage.GetActiveLayerIndex), UNDO_ImageHeader
@@ -1076,7 +1048,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="143:15
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="363:15:15" line-data="                Process &quot;Paste to cursor&quot;, False, BuildParamList(&quot;canvas-mouse-x&quot;, FormMain.MainCanvas(0).GetLastMouseX(), &quot;canvas-mouse-y&quot;, FormMain.MainCanvas(0).GetLastMouseY()), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="498:1:1" line-data="    Launch_ByName_MenuImage = cmdFound">`Launch_ByName_MenuImage`</SwmToken> finishes dispatching image actions to Process or other modules. If the command isn't recognized, it returns False so the next menu group can be checked.
+After returning from <SwmToken path="Modules/Actions.bas" pos="363:15:15" line-data="                Process &quot;Paste to cursor&quot;, False, BuildParamList(&quot;canvas-mouse-x&quot;, FormMain.MainCanvas(0).GetLastMouseX(), &quot;canvas-mouse-y&quot;, FormMain.MainCanvas(0).GetLastMouseY()), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="498:1:1" line-data="    Launch_ByName_MenuImage = cmdFound">`Launch_ByName_MenuImage`</SwmToken> finishes by calling Process for each image action, like flatten or edit metadata. If the action isn't matched, <SwmToken path="Modules/Actions.bas" pos="494:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> is set to False so the flow can continue.
 
 ```visual basic
                 Process "Count unique colors", True
@@ -1101,13 +1073,13 @@ End Function
 
 </SwmSnippet>
 
-## Chaining to Layer Menu Actions
+## Handling Layer Menu Commands
 
 <SwmSnippet path="/Modules/Actions.bas" line="144">
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="143:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuImage(srcMenuName, actionSource)">`Launch_ByName_MenuImage`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> tries <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> to see if the command matches a layer menu action. This keeps the search order logical: file, edit, image, then layer actions.
+Back in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if image menu logic didn't handle the action, we try <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> next to see if it's a layer menu command. This keeps the flow moving through relevant handlers.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)
@@ -1117,48 +1089,46 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="143:15:15" line-d
 
 </SwmSnippet>
 
-## Handling Layer Menu Actions
+## Handling Layer Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User requests a layer operation from the menu"]
+    node1["Receive layer menu command (srcMenuName)"] --> node2{"Is an image open?"}
     click node1 openCode "Modules/Actions.bas:504:507"
-    node1 --> node2{"Is an image open?"}
-    click node2 openCode "Modules/Actions.bas:507:508"
-    node2 -->|"No"| node6["Operation not performed"]
-    click node6 openCode "Modules/Actions.bas:507:508"
-    node2 -->|"Yes"| node3["Determine target layer"]
+    node2 -->|"No"| node7["Do nothing"]
+    click node2 openCode "Modules/Actions.bas:507:507"
+    node2 -->|"Yes"| node3["Determine target layer (targetLayerIndex)"]
     click node3 openCode "Modules/Actions.bas:509:513"
-    node3 --> node4{"Is the menu command recognized?"}
+    node3 --> node4{"Is the requested operation recognized (srcMenuName)?"}
     click node4 openCode "Modules/Actions.bas:517:687"
-    node4 -->|"Yes"| node5["Perform the requested layer operation"]
+    node4 -->|"Yes"| node5["Execute layer operation"]
     click node5 openCode "Modules/Actions.bas:519:684"
-    node5 --> node7["Operation performed successfully"]
-    click node7 openCode "Modules/Actions.bas:691:693"
-    node4 -->|"No"| node6
-
+    node4 -->|"No"| node6["Indicate failure"]
+    click node6 openCode "Modules/Actions.bas:687:691"
+    node5 --> node8["Return result (success)"]
+    click node8 openCode "Modules/Actions.bas:691:693"
+    node6 --> node8
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["User requests a layer operation from the menu"]
+%%     node1["Receive layer menu command (<SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken>)"] --> node2{"Is an image open?"}
 %%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:504:507"
-%%     node1 --> node2{"Is an image open?"}
-%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:507:508"
-%%     node2 -->|"No"| node6["Operation not performed"]
-%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:507:508"
-%%     node2 -->|"Yes"| node3["Determine target layer"]
+%%     node2 -->|"No"| node7["Do nothing"]
+%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:507:507"
+%%     node2 -->|"Yes"| node3["Determine target layer (<SwmToken path="Modules/Actions.bas" pos="104:49:49" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`targetLayerIndex`</SwmToken>)"]
 %%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:509:513"
-%%     node3 --> node4{"Is the menu command recognized?"}
+%%     node3 --> node4{"Is the requested operation recognized (<SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken>)?"}
 %%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:517:687"
-%%     node4 -->|"Yes"| node5["Perform the requested layer operation"]
+%%     node4 -->|"Yes"| node5["Execute layer operation"]
 %%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:519:684"
-%%     node5 --> node7["Operation performed successfully"]
-%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:691:693"
-%%     node4 -->|"No"| node6
-%% 
+%%     node4 -->|"No"| node6["Indicate failure"]
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:687:691"
+%%     node5 --> node8["Return result (success)"]
+%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:691:693"
+%%     node6 --> node8
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -1166,7 +1136,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="504:4:4" line-data="Private Function Launch_ByName_MenuLayer(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`Launch_ByName_MenuLayer`</SwmToken>, we check for an active image, validate the target layer index, then match the command to layer actions like add, delete, merge, etc., and call Process with the right parameters. If the command isn't recognized, <SwmToken path="Modules/Actions.bas" pos="515:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> is set to False.
+In <SwmToken path="Modules/Actions.bas" pos="504:4:4" line-data="Private Function Launch_ByName_MenuLayer(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`Launch_ByName_MenuLayer`</SwmToken>, we check for an active image, validate the target layer index, and map the action name to layer operations like add, delete, or merge. We call Process with the right parameters for each action.
 
 ```visual basic
 Private Function Launch_ByName_MenuLayer(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal targetLayerIndex As Long = -1) As Boolean
@@ -1200,7 +1170,7 @@ Private Function Launch_ByName_MenuLayer(ByRef srcMenuName As String, Optional B
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="524:15:15" line-data="                Process &quot;Add blank layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> to serialize parameters for actions like adding a blank layer. This lets the operation know which layer to use.
+Back in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, after running Process for actions like 'add blank layer', we use <SwmToken path="Modules/Actions.bas" pos="524:15:15" line-data="                Process &quot;Add blank layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> to package parameters like the target layer index. This ensures the operation has the info it needs.
 
 ```visual basic
                 Process "Add blank layer", False, BuildParamList("targetlayer", targetLayerIndex), UNDO_Image_VectorSafe
@@ -1216,7 +1186,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="527:13:13" line-data="                Process &quot;Duplicate Layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process again for actions like duplicating a layer, passing the serialized parameters to specify the target.
+After returning from <SwmToken path="Modules/Actions.bas" pos="527:13:13" line-data="                Process &quot;Duplicate Layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for 'duplicate layer', passing the target layer index as a parameter. This lets us duplicate the correct layer.
 
 ```visual basic
                 Process "Duplicate Layer", False, BuildParamList("targetlayer", targetLayerIndex), UNDO_Image_VectorSafe
@@ -1230,7 +1200,7 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="527:13:13" line-d
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="527:13:13" line-data="                Process &quot;Duplicate Layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> again for actions like 'layer via copy', serializing the target layer index for the operation.
+Back in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, after duplicating a layer, we use <SwmToken path="Modules/Actions.bas" pos="527:13:13" line-data="                Process &quot;Duplicate Layer&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> again for 'layer via copy', passing the target layer index so the copy operation knows which layer to use.
 
 ```visual basic
                 Process "Duplicate Layer", False, BuildParamList("targetlayer", targetLayerIndex), UNDO_Image_VectorSafe
@@ -1255,7 +1225,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="539:15:15" line-data="                Process &quot;Layer via copy&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for actions like 'layer via copy', passing the serialized parameters to specify the target.
+After returning from <SwmToken path="Modules/Actions.bas" pos="539:15:15" line-data="                Process &quot;Layer via copy&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for 'layer via copy', passing the target layer index as a parameter. This lets us copy the correct layer.
 
 ```visual basic
                 Process "Layer via copy", False, BuildParamList("targetlayer", targetLayerIndex), UNDO_Image_VectorSafe
@@ -1269,7 +1239,7 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="539:15:15" line-d
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="539:15:15" line-data="                Process &quot;Layer via copy&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> for actions like 'layer via cut', serializing the target layer index for the operation.
+Back in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, after copying a layer, we use <SwmToken path="Modules/Actions.bas" pos="539:15:15" line-data="                Process &quot;Layer via copy&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> for 'layer via cut', passing the target layer index so the cut operation knows which layer to use.
 
 ```visual basic
                 Process "Layer via copy", False, BuildParamList("targetlayer", targetLayerIndex), UNDO_Image_VectorSafe
@@ -1285,7 +1255,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="542:15:15" line-data="                Process &quot;Layer via cut&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for actions like 'layer via cut', passing the serialized parameters to specify the target.
+After returning from <SwmToken path="Modules/Actions.bas" pos="542:15:15" line-data="                Process &quot;Layer via cut&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for 'layer via cut', passing the target layer index as a parameter. This lets us cut the correct layer.
 
 ```visual basic
                 Process "Layer via cut", False, BuildParamList("targetlayer", targetLayerIndex), UNDO_Image
@@ -1299,7 +1269,7 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="542:15:15" line-d
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="542:15:15" line-data="                Process &quot;Layer via cut&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken> for actions like deleting a layer, serializing the layer index for the operation.
+Back in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, after cutting a layer, we use <SwmToken path="Modules/Actions.bas" pos="542:15:15" line-data="                Process &quot;Layer via cut&quot;, False, BuildParamList(&quot;targetlayer&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken> for 'delete layer', passing the layer index so the delete operation knows which layer to remove.
 
 ```visual basic
                 Process "Layer via cut", False, BuildParamList("targetlayer", targetLayerIndex), UNDO_Image
@@ -1316,7 +1286,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="546:13:13" line-data="                Process &quot;Delete layer&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for actions like deleting a layer, passing the serialized parameters to specify the target.
+After returning from <SwmToken path="Modules/Actions.bas" pos="546:13:13" line-data="                Process &quot;Delete layer&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for 'delete layer', passing the layer index as a parameter. This lets us delete the correct layer.
 
 ```visual basic
                 Process "Delete layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Image_VectorSafe
@@ -1330,7 +1300,7 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="546:13:13" line-d
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="546:13:13" line-data="                Process &quot;Delete layer&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> for actions like merging layers, serializing the layer index for the operation.
+Back in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, after deleting a layer, we use <SwmToken path="Modules/Actions.bas" pos="546:13:13" line-data="                Process &quot;Delete layer&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image_VectorSafe">`BuildParamList`</SwmToken> for 'merge layer up', passing the layer index so the merge operation knows which layer to use.
 
 ```visual basic
                 Process "Delete layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Image_VectorSafe
@@ -1359,7 +1329,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="562:15:15" line-data="            Process &quot;Merge layer up&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for actions like merging layers, passing the serialized parameters to specify the target.
+After returning from <SwmToken path="Modules/Actions.bas" pos="562:15:15" line-data="            Process &quot;Merge layer up&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for 'merge layer up', passing the layer index as a parameter. This lets us merge the correct layer.
 
 ```visual basic
             Process "Merge layer up", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Image
@@ -1373,7 +1343,7 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="562:15:15" line-d
 
 ---
 
-After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses <SwmToken path="Modules/Actions.bas" pos="562:15:15" line-data="            Process &quot;Merge layer up&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken> for actions like merging layers down, serializing the layer index for the operation.
+Back in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, after merging a layer up, we use <SwmToken path="Modules/Actions.bas" pos="562:15:15" line-data="            Process &quot;Merge layer up&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken> for 'merge layer down', passing the layer index so the merge operation knows which layer to use.
 
 ```visual basic
             Process "Merge layer up", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Image
@@ -1389,7 +1359,7 @@ After returning from Processor, <SwmToken path="Modules/Actions.bas" pos="144:15
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="565:15:15" line-data="            Process &quot;Merge layer down&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for actions like merging layers down, passing the serialized parameters to specify the target.
+After returning from <SwmToken path="Modules/Actions.bas" pos="565:15:15" line-data="            Process &quot;Merge layer down&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process for 'merge layer down', passing the layer index as a parameter. This lets us merge the correct layer.
 
 ```visual basic
             Process "Merge layer down", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Image
@@ -1403,7 +1373,7 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="565:15:15" line-d
 
 ---
 
-After handling the previous layer operation in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we need to serialize the target layer index using <SwmToken path="Modules/Actions.bas" pos="565:15:15" line-data="            Process &quot;Merge layer down&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken> from <SwmPath>[Modules/TextSupport.bas](Modules/TextSupport.bas)</SwmPath>. This prepares the parameters for the next Process call, which executes the requested layer order change (like moving a layer to the top).
+After moving a layer down with Process, we use <SwmToken path="Modules/Actions.bas" pos="565:15:15" line-data="            Process &quot;Merge layer down&quot;, False, BuildParamList(&quot;layerindex&quot;, targetLayerIndex), UNDO_Image">`BuildParamList`</SwmToken> to package the target layer index. This lets <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> pass the right layer info for subsequent ordering actions.
 
 ```visual basic
             Process "Merge layer down", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Image
@@ -1432,7 +1402,7 @@ After handling the previous layer operation in <SwmToken path="Modules/Actions.b
 
 ---
 
-After serializing the layer index in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we call Process to actually raise the layer to the top, passing the serialized parameters and specifying the undo type.
+After building the parameters for 'Raise layer to top', we call Process to actually perform the layer movement. This triggers the undo logic for image header changes in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>.
 
 ```visual basic
                 Process "Raise layer to top", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1446,7 +1416,7 @@ After serializing the layer index in <SwmToken path="Modules/Actions.bas" pos="1
 
 ---
 
-After moving a layer to the top, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> serializes the layer index again for the next action, like raising a layer by one position, so Process can handle it correctly.
+After raising the layer to the top, we build the parameters again for the next movement. <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> keeps passing the layer index so each Process call knows which layer to affect.
 
 ```visual basic
                 Process "Raise layer to top", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1462,7 +1432,7 @@ After moving a layer to the top, <SwmToken path="Modules/Actions.bas" pos="144:1
 
 ---
 
-For every layer movement in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index before calling Process, so each action is directed at the right layer.
+After building the parameters for 'Raise layer', we call Process to move the layer up one position. <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses the layer index to keep these movements precise.
 
 ```visual basic
                 Process "Raise layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1476,7 +1446,7 @@ For every layer movement in <SwmToken path="Modules/Actions.bas" pos="144:15:15"
 
 ---
 
-After each layer movement in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the parameters again before calling Process, so every action gets the right context.
+After processing the layer raise, we build parameters again for the next movement. <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> keeps the undo logic consistent by passing the right undo type for each action.
 
 ```visual basic
                 Process "Raise layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1492,7 +1462,7 @@ After each layer movement in <SwmToken path="Modules/Actions.bas" pos="144:15:15
 
 ---
 
-Before lowering a layer in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can execute the action on the correct layer.
+After building parameters for 'Lower layer', we call Process to move the layer down. <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> uses the undo system to make these changes reversible.
 
 ```visual basic
                 Process "Lower layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1506,7 +1476,7 @@ Before lowering a layer in <SwmToken path="Modules/Actions.bas" pos="144:15:15" 
 
 ---
 
-After lowering a layer, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> serializes the layer index again for lowering it to the bottom, so Process can target the right layer.
+After processing the 'Lower layer' action, we build parameters for 'Lower layer to bottom' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can move the layer all the way down, keeping the stack order correct.
 
 ```visual basic
                 Process "Lower layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1522,7 +1492,7 @@ After lowering a layer, <SwmToken path="Modules/Actions.bas" pos="144:15:15" lin
 
 ---
 
-Before moving a layer to the bottom in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can execute the action on the correct layer.
+After building parameters for visibility toggling, we call Process to show or hide the layer. <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> passes the layer index so only the intended layer is affected.
 
 ```visual basic
                 Process "Lower layer to bottom", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1536,7 +1506,7 @@ Before moving a layer to the bottom in <SwmToken path="Modules/Actions.bas" pos=
 
 ---
 
-Before toggling layer visibility in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can target the right layer for the visibility change.
+After toggling visibility, we build parameters for 'Show only this layer' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can hide all other layers except the one specified.
 
 ```visual basic
                 Process "Lower layer to bottom", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1556,7 +1526,7 @@ Before toggling layer visibility in <SwmToken path="Modules/Actions.bas" pos="14
 
 ---
 
-Before showing only one layer in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can handle the visibility change for the right layer.
+After showing only one layer, we build parameters for 'Hide only this layer' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can hide just the specified layer, keeping the rest visible.
 
 ```visual basic
                 Process "Toggle layer visibility", False, BuildParamList("layerindex", targetLayerIndex), UNDO_LayerHeader
@@ -1570,7 +1540,7 @@ Before showing only one layer in <SwmToken path="Modules/Actions.bas" pos="144:1
 
 ---
 
-Before hiding only one layer in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can handle the visibility change for the right layer.
+After hiding only one layer, we move on to showing or hiding all layers. <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> calls Process with no extra parameters since these actions affect all layers.
 
 ```visual basic
                 Process "Toggle layer visibility", False, BuildParamList("layerindex", targetLayerIndex), UNDO_LayerHeader
@@ -1586,7 +1556,7 @@ Before hiding only one layer in <SwmToken path="Modules/Actions.bas" pos="144:15
 
 ---
 
-After serializing the layer index for hiding only one layer in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we call Process to execute the visibility change.
+After handling visibility, we build parameters for 'Reset layer size' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can target the right layer for the size reset.
 
 ```visual basic
                 Process "Show only this layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1600,7 +1570,7 @@ After serializing the layer index for hiding only one layer in <SwmToken path="M
 
 ---
 
-For showing or hiding all layers in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we don't need to serialize a layer index, just call Process with the right undo type.
+After resetting layer size, we build parameters for 'Fit layer to image' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can resize the specified layer to match the image.
 
 ```visual basic
                 Process "Show only this layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1616,7 +1586,7 @@ For showing or hiding all layers in <SwmToken path="Modules/Actions.bas" pos="14
 
 ---
 
-For crop, pad, and trim actions in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we call Process with the right undo type, passing parameters as needed for each operation.
+After handling resizing, we build parameters for 'Rasterize layer' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can rasterize the correct layer and track the change for undo.
 
 ```visual basic
                 Process "Hide only this layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1630,7 +1600,7 @@ For crop, pad, and trim actions in <SwmToken path="Modules/Actions.bas" pos="144
 
 ---
 
-For orientation changes in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we call Process with the right undo type, showing dialogs for actions that need user input.
+After rasterizing, we build parameters for splitting layers so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can split the right layer or image as needed.
 
 ```visual basic
                 Process "Hide only this layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_ImageHeader
@@ -1685,7 +1655,7 @@ For orientation changes in <SwmToken path="Modules/Actions.bas" pos="144:15:15" 
 
 ---
 
-Before resetting layer size in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can handle the size reset for the right layer.
+After building parameters for splitting images to layers, <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> wraps up by calling Process for the final split action. If no command matches, it sets <SwmToken path="Modules/Actions.bas" pos="135:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = False">`cmdFound`</SwmToken> to False so the flow can continue.
 
 ```visual basic
                 Process "Reset layer size", False, BuildParamList("layerindex", targetLayerIndex), UNDO_LayerHeader
@@ -1699,7 +1669,7 @@ Before resetting layer size in <SwmToken path="Modules/Actions.bas" pos="144:15:
 
 ---
 
-For resizing actions in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we call Process and show dialogs for user input when needed.
+After resetting layer size, we build parameters for 'Fit layer to image' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can resize the specified layer to match the image.
 
 ```visual basic
                 Process "Reset layer size", False, BuildParamList("layerindex", targetLayerIndex), UNDO_LayerHeader
@@ -1721,7 +1691,7 @@ For resizing actions in <SwmToken path="Modules/Actions.bas" pos="144:15:15" lin
 
 ---
 
-Before fitting a layer to the image in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can handle the fit for the right layer.
+After building parameters for 'Fit layer to image', we call Process so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can resize the layer to match the image, tracking the change for undo.
 
 ```visual basic
                 Process "Fit layer to image", False, BuildParamList("layerindex", targetLayerIndex), UNDO_LayerHeader
@@ -1735,7 +1705,7 @@ Before fitting a layer to the image in <SwmToken path="Modules/Actions.bas" pos=
 
 ---
 
-For transparency actions in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we call Process and show dialogs for user input when needed.
+After handling resizing, we build parameters for 'Rasterize layer' so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can rasterize the correct layer and track the change for undo.
 
 ```visual basic
                 Process "Fit layer to image", False, BuildParamList("layerindex", targetLayerIndex), UNDO_LayerHeader
@@ -1765,7 +1735,7 @@ For transparency actions in <SwmToken path="Modules/Actions.bas" pos="144:15:15"
 
 ---
 
-Before rasterizing a layer in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we serialize the layer index so Process can handle the rasterization for the right layer.
+After rasterizing, we build parameters for splitting layers so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can split the right layer or image as needed.
 
 ```visual basic
                 Process "Rasterize layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Layer
@@ -1779,7 +1749,7 @@ Before rasterizing a layer in <SwmToken path="Modules/Actions.bas" pos="144:15:1
 
 ---
 
-For splitting layers in <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, we call Process and show dialogs for user input when needed.
+After splitting a layer into an image, we build parameters for splitting all layers to images so <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> can handle batch splits.
 
 ```visual basic
                 Process "Rasterize layer", False, BuildParamList("layerindex", targetLayerIndex), UNDO_Layer
@@ -1805,7 +1775,7 @@ For splitting layers in <SwmToken path="Modules/Actions.bas" pos="144:15:15" lin
 
 ---
 
-At the end of <SwmToken path="Modules/Actions.bas" pos="691:1:1" line-data="    Launch_ByName_MenuLayer = cmdFound">`Launch_ByName_MenuLayer`</SwmToken>, we use a Select Case on <SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken> to map each command to a layer action, calling Process with the right parameters. If the command isn't recognized, we set <SwmToken path="Modules/Actions.bas" pos="687:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> to False and return.
+After building parameters for splitting images to layers, <SwmToken path="Modules/Actions.bas" pos="691:1:1" line-data="    Launch_ByName_MenuLayer = cmdFound">`Launch_ByName_MenuLayer`</SwmToken> wraps up by calling Process for the final split action. If no command matches, it sets <SwmToken path="Modules/Actions.bas" pos="687:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> to False so the flow can continue.
 
 ```visual basic
                 Process "Split images into layers", True
@@ -1824,13 +1794,13 @@ End Function
 
 </SwmSnippet>
 
-## Checking Selection Menu Actions
+## Trying Selection Menu Actions
 
 <SwmSnippet path="/Modules/Actions.bas" line="145">
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if no command was found, we try <SwmToken path="Modules/Actions.bas" pos="145:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuSelect(srcMenuName, actionSource)">`Launch_ByName_MenuSelect`</SwmToken> next to see if the command matches a selection menu action.
+After returning from <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuLayer(srcMenuName, actionSource, targetLayerIndex)">`Launch_ByName_MenuLayer`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> checks if the command was handled. If not, it tries <SwmToken path="Modules/Actions.bas" pos="145:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuSelect(srcMenuName, actionSource)">`Launch_ByName_MenuSelect`</SwmToken> to see if the action matches any selection-related commands.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuSelect(srcMenuName, actionSource)
@@ -1840,36 +1810,44 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="144:15:15" line-d
 
 </SwmSnippet>
 
-## Dispatching Selection Commands
+## Handling Selection Commands
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-  node1{"Is an image open?"}
-  click node1 openCode "Modules/Actions.bas:698:698"
-  node1 -->|"No"| node2["Action not performed (return failure)"]
-  click node2 openCode "Modules/Actions.bas:698:698"
-  node1 -->|"Yes"| node3{"Is the menu action recognized?"}
-  click node3 openCode "Modules/Actions.bas:702:756"
-  node3 -->|"Yes"| node4["Perform the selected action (return success)"]
-  click node4 openCode "Modules/Actions.bas:705:751"
-  node3 -->|"No"| node5["Action not performed (return failure)"]
-  click node5 openCode "Modules/Actions.bas:754:755"
+    node1["User selects a selection action from the menu"]
+    click node1 openCode "Modules/Actions.bas:695:696"
+    node1 --> node2{"Is an image open?"}
+    click node2 openCode "Modules/Actions.bas:698:698"
+    node2 -->|"No"| node5["Return result (cmdFound = False)"]
+    click node5 openCode "Modules/Actions.bas:754:758"
+    node2 -->|"Yes"| node3{"Is the menu action recognized?"}
+    click node3 openCode "Modules/Actions.bas:702:753"
+    node3 -->|"Yes"| node4["Execute the requested selection action (cmdFound = True)"]
+    click node4 openCode "Modules/Actions.bas:704:753"
+    node3 -->|"No"| node5
+    node4 --> node6["Return result (cmdFound = True)"]
+    click node6 openCode "Modules/Actions.bas:758:760"
+    node5 --> node6
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%   node1{"Is an image open?"}
-%%   click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:698:698"
-%%   node1 -->|"No"| node2["Action not performed (return failure)"]
-%%   click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:698:698"
-%%   node1 -->|"Yes"| node3{"Is the menu action recognized?"}
-%%   click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:702:756"
-%%   node3 -->|"Yes"| node4["Perform the selected action (return success)"]
-%%   click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:705:751"
-%%   node3 -->|"No"| node5["Action not performed (return failure)"]
-%%   click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:754:755"
+%%     node1["User selects a selection action from the menu"]
+%%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:695:696"
+%%     node1 --> node2{"Is an image open?"}
+%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:698:698"
+%%     node2 -->|"No"| node5["Return result (<SwmToken path="Modules/Actions.bas" pos="135:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = False">`cmdFound`</SwmToken> = False)"]
+%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:754:758"
+%%     node2 -->|"Yes"| node3{"Is the menu action recognized?"}
+%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:702:753"
+%%     node3 -->|"Yes"| node4["Execute the requested selection action (<SwmToken path="Modules/Actions.bas" pos="135:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = False">`cmdFound`</SwmToken> = True)"]
+%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:704:753"
+%%     node3 -->|"No"| node5
+%%     node4 --> node6["Return result (<SwmToken path="Modules/Actions.bas" pos="135:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = False">`cmdFound`</SwmToken> = True)"]
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:758:760"
+%%     node5 --> node6
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -1877,7 +1855,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="695:4:4" line-data="Private Function Launch_ByName_MenuSelect(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuSelect`</SwmToken>, we first check if there's an active image. If so, we use a Select Case on <SwmToken path="Modules/Actions.bas" pos="695:8:8" line-data="Private Function Launch_ByName_MenuSelect(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`srcMenuName`</SwmToken> to map the command to a selection action, then call Process to execute it. If the command isn't recognized, <SwmToken path="Modules/Actions.bas" pos="700:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> is set to False.
+In <SwmToken path="Modules/Actions.bas" pos="695:4:4" line-data="Private Function Launch_ByName_MenuSelect(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuSelect`</SwmToken>, we check for an active image, then use a Select Case to map the menu name to a selection command. For each match, we call Process to run the selection operation.
 
 ```visual basic
 Private Function Launch_ByName_MenuSelect(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -1925,7 +1903,7 @@ Private Function Launch_ByName_MenuSelect(ByRef srcMenuName As String, Optional 
 
 ---
 
-Before erasing a selected area in <SwmToken path="Modules/Actions.bas" pos="145:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuSelect(srcMenuName, actionSource)">`Launch_ByName_MenuSelect`</SwmToken>, we serialize the target layer index so Process can handle the erase for the right layer.
+After processing selection commands, we use <SwmToken path="Modules/Actions.bas" pos="729:15:15" line-data="            Process &quot;Erase selected area&quot;, False, BuildParamList(&quot;targetlayer&quot;, PDImages.GetActiveImage.GetActiveLayerIndex), UNDO_Layer">`BuildParamList`</SwmToken> for 'Erase selected area' so <SwmToken path="Modules/Actions.bas" pos="145:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuSelect(srcMenuName, actionSource)">`Launch_ByName_MenuSelect`</SwmToken> can target the right layer for the erase operation.
 
 ```visual basic
             Process "Erase selected area", False, BuildParamList("targetlayer", PDImages.GetActiveImage.GetActiveLayerIndex), UNDO_Layer
@@ -1960,7 +1938,7 @@ Before erasing a selected area in <SwmToken path="Modules/Actions.bas" pos="145:
 
 ---
 
-At the end of <SwmToken path="Modules/Actions.bas" pos="758:1:1" line-data="    Launch_ByName_MenuSelect = cmdFound">`Launch_ByName_MenuSelect`</SwmToken>, we use a Select Case on <SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken> to map each command to a selection action, calling Process with the right parameters. If the command isn't recognized, we set <SwmToken path="Modules/Actions.bas" pos="754:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> to False and return.
+After handling all selection commands, <SwmToken path="Modules/Actions.bas" pos="758:1:1" line-data="    Launch_ByName_MenuSelect = cmdFound">`Launch_ByName_MenuSelect`</SwmToken> sets <SwmToken path="Modules/Actions.bas" pos="754:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> to False if nothing matched, then returns whether a valid command was processed.
 
 ```visual basic
                 Process "Export selection mask as image", True
@@ -1979,13 +1957,13 @@ End Function
 
 </SwmSnippet>
 
-## Checking Adjustment Menu Actions
+## Trying Adjustment Menu Actions
 
 <SwmSnippet path="/Modules/Actions.bas" line="146">
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="145:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuSelect(srcMenuName, actionSource)">`Launch_ByName_MenuSelect`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if no command was found, we try <SwmToken path="Modules/Actions.bas" pos="146:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuAdjustments(srcMenuName, actionSource)">`Launch_ByName_MenuAdjustments`</SwmToken> next to see if the command matches an adjustment menu action.
+After returning from <SwmToken path="Modules/Actions.bas" pos="145:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuSelect(srcMenuName, actionSource)">`Launch_ByName_MenuSelect`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> checks if the command was handled. If not, it tries <SwmToken path="Modules/Actions.bas" pos="146:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuAdjustments(srcMenuName, actionSource)">`Launch_ByName_MenuAdjustments`</SwmToken> to see if the action matches any adjustment-related commands.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuAdjustments(srcMenuName, actionSource)
@@ -1995,46 +1973,44 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="145:15:15" line-d
 
 </SwmSnippet>
 
-## Dispatching Adjustment Commands
+## Handling Image Adjustments
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Check if an image is open"]
+    node1{"Is an image open?"}
     click node1 openCode "Modules/Actions.bas:764:765"
-    node1 --> node2{"Is an image open?"}
+    node1 -->|"No"| node2["No action performed"]
     click node2 openCode "Modules/Actions.bas:765:765"
-    node2 -->|"No"| node5["Return failure (no image open)"]
-    click node5 openCode "Modules/Actions.bas:765:765"
-    node2 -->|"Yes"| node3{"Is srcMenuName a recognized adjustment command?"}
+    node1 -->|"Yes"| node3{"Is the selected adjustment recognized?"}
     click node3 openCode "Modules/Actions.bas:769:910"
-    node3 -->|"Yes"| node4["Apply the corresponding adjustment to the image"]
-    click node4 openCode "Modules/Actions.bas:771:909"
-    node4 --> node6["Return success"]
-    click node6 openCode "Modules/Actions.bas:912:912"
-    node3 -->|"No"| node7["Return failure (unrecognized command)"]
-    click node7 openCode "Modules/Actions.bas:908:912"
-
+    node3 -->|"No"| node4["No action performed"]
+    click node4 openCode "Modules/Actions.bas:908:909"
+    node3 -->|"Yes"| node5{"Does the adjustment require a dialog?"}
+    click node5 openCode "Modules/Actions.bas:856:857"
+    node5 -->|"Yes"| node6["Show adjustment dialog"]
+    click node6 openCode "Modules/Actions.bas:856:857"
+    node5 -->|"No"| node7["Apply adjustment to image"]
+    click node7 openCode "Modules/Actions.bas:771:906"
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["Check if an image is open"]
+%%     node1{"Is an image open?"}
 %%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:764:765"
-%%     node1 --> node2{"Is an image open?"}
+%%     node1 -->|"No"| node2["No action performed"]
 %%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:765:765"
-%%     node2 -->|"No"| node5["Return failure (no image open)"]
-%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:765:765"
-%%     node2 -->|"Yes"| node3{"Is <SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken> a recognized adjustment command?"}
+%%     node1 -->|"Yes"| node3{"Is the selected adjustment recognized?"}
 %%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:769:910"
-%%     node3 -->|"Yes"| node4["Apply the corresponding adjustment to the image"]
-%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:771:909"
-%%     node4 --> node6["Return success"]
-%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:912:912"
-%%     node3 -->|"No"| node7["Return failure (unrecognized command)"]
-%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:908:912"
-%% 
+%%     node3 -->|"No"| node4["No action performed"]
+%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:908:909"
+%%     node3 -->|"Yes"| node5{"Does the adjustment require a dialog?"}
+%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:856:857"
+%%     node5 -->|"Yes"| node6["Show adjustment dialog"]
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:856:857"
+%%     node5 -->|"No"| node7["Apply adjustment to image"]
+%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:771:906"
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -2042,7 +2018,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="762:4:4" line-data="Private Function Launch_ByName_MenuAdjustments(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuAdjustments`</SwmToken>, we first check if there's an active image. If so, we use a Select Case on <SwmToken path="Modules/Actions.bas" pos="762:8:8" line-data="Private Function Launch_ByName_MenuAdjustments(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`srcMenuName`</SwmToken> to map the command to an adjustment action, then call Process to execute it. If the command isn't recognized, <SwmToken path="Modules/Actions.bas" pos="767:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> is set to False.
+In <SwmToken path="Modules/Actions.bas" pos="762:4:4" line-data="Private Function Launch_ByName_MenuAdjustments(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuAdjustments`</SwmToken>, we check for an active image, then use a Select Case to map the menu name to an adjustment command. For each match, we call Process or show a dialog as needed.
 
 ```visual basic
 Private Function Launch_ByName_MenuAdjustments(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -2149,7 +2125,7 @@ Private Function Launch_ByName_MenuAdjustments(ByRef srcMenuName As String, Opti
 
 ---
 
-For histogram display in <SwmToken path="Modules/Actions.bas" pos="146:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuAdjustments(srcMenuName, actionSource)">`Launch_ByName_MenuAdjustments`</SwmToken>, we show a modal dialog instead of calling Process, since this action is UI-only.
+After processing adjustment commands, <SwmToken path="Modules/Actions.bas" pos="146:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuAdjustments(srcMenuName, actionSource)">`Launch_ByName_MenuAdjustments`</SwmToken> shows <SwmToken path="Modules/Actions.bas" pos="856:6:6" line-data="                ShowPDDialog vbModal, FormHistogram">`FormHistogram`</SwmToken> for histogram display actions, since those need a UI dialog.
 
 ```visual basic
                 ShowPDDialog vbModal, FormHistogram
@@ -2181,7 +2157,7 @@ For histogram display in <SwmToken path="Modules/Actions.bas" pos="146:15:15" li
 
 ---
 
-At the end of <SwmToken path="Modules/Actions.bas" pos="912:1:1" line-data="    Launch_ByName_MenuAdjustments = cmdFound">`Launch_ByName_MenuAdjustments`</SwmToken>, we use a Select Case on <SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken> to map each command to an adjustment action, calling Process with the right parameters. If the command isn't recognized, we set <SwmToken path="Modules/Actions.bas" pos="908:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> to False and return.
+After handling all adjustment commands, <SwmToken path="Modules/Actions.bas" pos="912:1:1" line-data="    Launch_ByName_MenuAdjustments = cmdFound">`Launch_ByName_MenuAdjustments`</SwmToken> sets <SwmToken path="Modules/Actions.bas" pos="908:1:1" line-data="            cmdFound = False">`cmdFound`</SwmToken> to False if nothing matched, then returns whether a valid command was processed.
 
 ```visual basic
             'Case "adj_bandc"   'Covered by parent menu
@@ -2230,18 +2206,18 @@ End Function
 
 </SwmSnippet>
 
-## Checking Effect Menu Actions
+## Trying Effect Menu Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Try to launch action from effects menu"]
+    node1["Attempt to execute action via menu effects handler"]
     click node1 openCode "Modules/Actions.bas:147:147"
     node1 --> node2{"Was action found?"}
     click node2 openCode "Modules/Actions.bas:147:147"
-    node2 -->|"Yes"| node3["Action launched"]
+    node2 -->|"Yes"| node3["Action executed"]
     click node3 openCode "Modules/Actions.bas:147:147"
-    node2 -->|"No"| node4["Try to launch action from tools menu"]
+    node2 -->|"No"| node4["Attempt to execute action via menu tools handler"]
     click node4 openCode "Modules/Actions.bas:148:148"
     node4 --> node5{"Was action found?"}
     click node5 openCode "Modules/Actions.bas:148:148"
@@ -2254,13 +2230,13 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["Try to launch action from effects menu"]
+%%     node1["Attempt to execute action via menu effects handler"]
 %%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:147:147"
 %%     node1 --> node2{"Was action found?"}
 %%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:147:147"
-%%     node2 -->|"Yes"| node3["Action launched"]
+%%     node2 -->|"Yes"| node3["Action executed"]
 %%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:147:147"
-%%     node2 -->|"No"| node4["Try to launch action from tools menu"]
+%%     node2 -->|"No"| node4["Attempt to execute action via menu tools handler"]
 %%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:148:148"
 %%     node4 --> node5{"Was action found?"}
 %%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:148:148"
@@ -2275,7 +2251,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="146:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuAdjustments(srcMenuName, actionSource)">`Launch_ByName_MenuAdjustments`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if no command was found, we try <SwmToken path="Modules/Actions.bas" pos="147:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEffects(srcMenuName, actionSource)">`Launch_ByName_MenuEffects`</SwmToken> next to see if the command matches an effect menu action.
+After returning from <SwmToken path="Modules/Actions.bas" pos="146:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuAdjustments(srcMenuName, actionSource)">`Launch_ByName_MenuAdjustments`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> checks if the command was handled. If not, it tries <SwmToken path="Modules/Actions.bas" pos="147:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEffects(srcMenuName, actionSource)">`Launch_ByName_MenuEffects`</SwmToken> to see if the action matches any effect-related commands.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEffects(srcMenuName, actionSource)
@@ -2289,7 +2265,7 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="146:15:15" line-d
 
 ---
 
-<SwmToken path="Modules/Actions.bas" pos="916:4:4" line-data="Private Function Launch_ByName_MenuEffects(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuEffects`</SwmToken> checks for an active image, then uses a Select Case on <SwmToken path="Modules/Actions.bas" pos="916:8:8" line-data="Private Function Launch_ByName_MenuEffects(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`srcMenuName`</SwmToken> to map the command to an effect action. For each recognized effect, it calls Process with the effect name and a True flag. If the command isn't recognized, <SwmToken path="Modules/Actions.bas" pos="921:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> is set to False.
+<SwmToken path="Modules/Actions.bas" pos="916:4:4" line-data="Private Function Launch_ByName_MenuEffects(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuEffects`</SwmToken> checks for an active image, then uses a Select Case to map the menu name to an effect command. For each match, it calls Process to apply the effect, usually with a dialog.
 
 ```visual basic
 Private Function Launch_ByName_MenuEffects(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -2600,7 +2576,7 @@ End Function
 
 ---
 
-After returning from <SwmToken path="Modules/Actions.bas" pos="147:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEffects(srcMenuName, actionSource)">`Launch_ByName_MenuEffects`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, if no command was found, we try <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)">`Launch_ByName_MenuTools`</SwmToken> next to see if the command matches a tool menu action.
+After returning from <SwmToken path="Modules/Actions.bas" pos="147:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuEffects(srcMenuName, actionSource)">`Launch_ByName_MenuEffects`</SwmToken>, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> checks if the command was handled. If not, it tries <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)">`Launch_ByName_MenuTools`</SwmToken> to see if the action matches any tool-related commands.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)
@@ -2610,46 +2586,60 @@ After returning from <SwmToken path="Modules/Actions.bas" pos="147:15:15" line-d
 
 </SwmSnippet>
 
-## Dispatching Tool Commands
+## Handling Tool Menu Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-  node1["User selects a tool or menu command"]
-  click node1 openCode "Modules/Actions.bas:1215:1283"
-  node1 --> node2{"Does the command match a known tool or macro?"}
-  click node2 openCode "Modules/Actions.bas:1219:1282"
-  node2 -->|"Yes"| node3{"Is an image open (for macro actions)?"}
-  click node3 openCode "Modules/Actions.bas:1235:1247"
-  node3 -->|"Yes or Not needed"| node4["Launch the corresponding tool, dialog, or macro action"]
-  click node4 openCode "Modules/Actions.bas:1224:1274"
-  node3 -->|"No"| node7["No action taken"]
-  click node7 openCode "Modules/Actions.bas:1280:1281"
-  node2 -->|"No"| node5{"Is it a recent macro command and is an image open?"}
-  click node5 openCode "Modules/Actions.bas:1287:1299"
-  node5 -->|"Yes"| node6["Play the selected recent macro"]
-  click node6 openCode "Modules/Actions.bas:1290:1296"
-  node5 -->|"No"| node7
+    node1["User selects a tool from the Tools menu"]
+    click node1 openCode "Modules/Actions.bas:1215:1219"
+    node1 --> node2{"Does the selected tool match a known command?"}
+    click node2 openCode "Modules/Actions.bas:1219:1282"
+    node2 -->|"Yes"| node3{"Does the tool require an active image?"}
+    click node3 openCode "Modules/Actions.bas:1235:1247"
+    node3 -->|"Yes, image active"| node4["Launch the tool or macro"]
+    click node4 openCode "Modules/Actions.bas:1236:1248"
+    node3 -->|"No, image not active"| node5["No tool launched"]
+    click node5 openCode "Modules/Actions.bas:1235:1237"
+    node2 -->|"No, unrecognized command"| node6{"Is the command a recent macro and is an image active?"}
+    click node6 openCode "Modules/Actions.bas:1287:1299"
+    node6 -->|"Yes"| node7["Play the recent macro"]
+    click node7 openCode "Modules/Actions.bas:1290:1296"
+    node6 -->|"No"| node8["No tool launched"]
+    click node8 openCode "Modules/Actions.bas:1280:1281"
+    node4 --> node9["Report tool launched"]
+    click node9 openCode "Modules/Actions.bas:1301:1302"
+    node7 --> node9
+    node5 --> node10["Report no tool launched"]
+    click node10 openCode "Modules/Actions.bas:1301:1302"
+    node8 --> node10
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%   node1["User selects a tool or menu command"]
-%%   click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1215:1283"
-%%   node1 --> node2{"Does the command match a known tool or macro?"}
-%%   click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1219:1282"
-%%   node2 -->|"Yes"| node3{"Is an image open (for macro actions)?"}
-%%   click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1235:1247"
-%%   node3 -->|"Yes or Not needed"| node4["Launch the corresponding tool, dialog, or macro action"]
-%%   click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1224:1274"
-%%   node3 -->|"No"| node7["No action taken"]
-%%   click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1280:1281"
-%%   node2 -->|"No"| node5{"Is it a recent macro command and is an image open?"}
-%%   click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1287:1299"
-%%   node5 -->|"Yes"| node6["Play the selected recent macro"]
-%%   click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1290:1296"
-%%   node5 -->|"No"| node7
+%%     node1["User selects a tool from the Tools menu"]
+%%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1215:1219"
+%%     node1 --> node2{"Does the selected tool match a known command?"}
+%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1219:1282"
+%%     node2 -->|"Yes"| node3{"Does the tool require an active image?"}
+%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1235:1247"
+%%     node3 -->|"Yes, image active"| node4["Launch the tool or macro"]
+%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1236:1248"
+%%     node3 -->|"No, image not active"| node5["No tool launched"]
+%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1235:1237"
+%%     node2 -->|"No, unrecognized command"| node6{"Is the command a recent macro and is an image active?"}
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1287:1299"
+%%     node6 -->|"Yes"| node7["Play the recent macro"]
+%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1290:1296"
+%%     node6 -->|"No"| node8["No tool launched"]
+%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1280:1281"
+%%     node4 --> node9["Report tool launched"]
+%%     click node9 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1301:1302"
+%%     node7 --> node9
+%%     node5 --> node10["Report no tool launched"]
+%%     click node10 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1301:1302"
+%%     node8 --> node10
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
 
@@ -2657,7 +2647,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="1215:4:4" line-data="Private Function Launch_ByName_MenuTools(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuTools`</SwmToken>, we use a Select Case on <SwmToken path="Modules/Actions.bas" pos="1215:8:8" line-data="Private Function Launch_ByName_MenuTools(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`srcMenuName`</SwmToken> to map each command to a tool action or dialog. For UI actions, we call <SwmToken path="Modules/Actions.bas" pos="1226:1:1" line-data="                ShowPDDialog vbModal, FormLanguageEditor">`ShowPDDialog`</SwmToken> or other interface functions. If the command isn't recognized, <SwmToken path="Modules/Actions.bas" pos="1217:3:3" line-data="    Dim cmdFound As Boolean: cmdFound = True">`cmdFound`</SwmToken> is set to False.
+In <SwmToken path="Modules/Actions.bas" pos="1215:4:4" line-data="Private Function Launch_ByName_MenuTools(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuTools`</SwmToken>, we use a Select Case to map the menu name to a tool command. For each match, we show dialogs, start/stop macro recording, or run other tool actions as needed.
 
 ```visual basic
 Private Function Launch_ByName_MenuTools(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -2703,7 +2693,7 @@ Private Function Launch_ByName_MenuTools(ByRef srcMenuName As String, Optional B
 
 ---
 
-After handling UI actions (dialogs, toggles, etc.) in <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)">`Launch_ByName_MenuTools`</SwmToken>, we call Process for commands that need actual work done, like playing a macro. This makes sure that tool actions aren't just UI changes—they also trigger the underlying logic when needed.
+After handling any UI dialogs or interface changes in <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)">`Launch_ByName_MenuTools`</SwmToken>, we call Process to actually execute tool menu commands like playing a macro. This step runs the requested tool action, making sure the command isn't just set up in the interface but actually performed.
 
 ```visual basic
             Process "Play macro", True
@@ -2742,7 +2732,7 @@ After handling UI actions (dialogs, toggles, etc.) in <SwmToken path="Modules/Ac
 
 ---
 
-After processing, we show a dialog if the tool action needs user interaction.
+After running Process for standalone package creation in <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)">`Launch_ByName_MenuTools`</SwmToken>, we show <SwmToken path="Modules/Actions.bas" pos="1274:6:6" line-data="                ShowPDDialog vbModal, FormPackage">`FormPackage`</SwmToken> as a modal dialog. This lets the user interact with packaging options, giving them a chance to confirm or adjust settings before the package is finalized.
 
 ```visual basic
                 ShowPDDialog vbModal, FormPackage
@@ -2758,7 +2748,7 @@ After processing, we show a dialog if the tool action needs user interaction.
 
 ---
 
-At the end of <SwmToken path="Modules/Actions.bas" pos="1301:1:1" line-data="    Launch_ByName_MenuTools = cmdFound">`Launch_ByName_MenuTools`</SwmToken>, if no direct match is found, we check if the command is a recent macro by prefix. If it is, we extract the index and play the macro file. The function returns True if any command was handled, otherwise False.
+At the end of <SwmToken path="Modules/Actions.bas" pos="1301:1:1" line-data="    Launch_ByName_MenuTools = cmdFound">`Launch_ByName_MenuTools`</SwmToken>, if no tool menu command matches, we check for recent macro commands by prefix. If found, we play the corresponding macro file. If nothing matches, we return False so the caller knows the command wasn't handled.
 
 ```visual basic
             'Handled directly in FormMain (for legacy reasons)
@@ -2794,41 +2784,53 @@ End Function
 
 </SwmSnippet>
 
-## Chaining to View Menu Actions
+## Trying View Menu Actions
 
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["Search for action in View menu"]
+    node1["Try to launch action by name in View menu"]
     click node1 openCode "Modules/Actions.bas:149:149"
-    node1 -->|"Action found"| node4["Action executed"]
-    click node4 openCode "Modules/Actions.bas:149:151"
-    node1 -->|"Not found"| node2["Search for action in Window menu"]
-    click node2 openCode "Modules/Actions.bas:150:150"
-    node2 -->|"Action found"| node4
-    node2 -->|"Not found"| node3["Search for action in Help menu"]
-    click node3 openCode "Modules/Actions.bas:151:151"
-    node3 -->|"Action found"| node4
-    node3 -->|"Not found"| node5["Action not found"]
-    click node5 openCode "Modules/Actions.bas:151:151"
+    node1 --> node2{"Was action found?"}
+    click node2 openCode "Modules/Actions.bas:149:149"
+    node2 -->|"Yes"| node5["Action executed"]
+    click node5 openCode "Modules/Actions.bas:149:149"
+    node2 -->|"No"| node3["Try to launch action by name in Window menu"]
+    click node3 openCode "Modules/Actions.bas:150:150"
+    node3 --> node4{"Was action found?"}
+    click node4 openCode "Modules/Actions.bas:150:150"
+    node4 -->|"Yes"| node5
+    node4 -->|"No"| node6["Try to launch action by name in Help menu"]
+    click node6 openCode "Modules/Actions.bas:151:151"
+    node6 --> node7{"Was action found?"}
+    click node7 openCode "Modules/Actions.bas:151:151"
+    node7 -->|"Yes"| node5
+    node7 -->|"No"| node8["Action not found"]
+    click node8 openCode "Modules/Actions.bas:151:151"
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["Search for action in View menu"]
+%%     node1["Try to launch action by name in View menu"]
 %%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:149:149"
-%%     node1 -->|"Action found"| node4["Action executed"]
-%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:149:151"
-%%     node1 -->|"Not found"| node2["Search for action in Window menu"]
-%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:150:150"
-%%     node2 -->|"Action found"| node4
-%%     node2 -->|"Not found"| node3["Search for action in Help menu"]
-%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:151:151"
-%%     node3 -->|"Action found"| node4
-%%     node3 -->|"Not found"| node5["Action not found"]
-%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:151:151"
+%%     node1 --> node2{"Was action found?"}
+%%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:149:149"
+%%     node2 -->|"Yes"| node5["Action executed"]
+%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:149:149"
+%%     node2 -->|"No"| node3["Try to launch action by name in Window menu"]
+%%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:150:150"
+%%     node3 --> node4{"Was action found?"}
+%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:150:150"
+%%     node4 -->|"Yes"| node5
+%%     node4 -->|"No"| node6["Try to launch action by name in Help menu"]
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:151:151"
+%%     node6 --> node7{"Was action found?"}
+%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:151:151"
+%%     node7 -->|"Yes"| node5
+%%     node7 -->|"No"| node8["Action not found"]
+%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:151:151"
 %% 
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
@@ -2837,7 +2839,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-After <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)">`Launch_ByName_MenuTools`</SwmToken>, if the command wasn't found, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> tries <SwmToken path="Modules/Actions.bas" pos="149:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuView(srcMenuName, actionSource)">`Launch_ByName_MenuView`</SwmToken> next. This keeps the search order consistent and checks view-related actions if tools didn't match.
+After returning from <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuTools(srcMenuName, actionSource)">`Launch_ByName_MenuTools`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, we call <SwmToken path="Modules/Actions.bas" pos="149:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuView(srcMenuName, actionSource)">`Launch_ByName_MenuView`</SwmToken> to see if the action name matches any view-related commands. This lets us handle UI changes like zoom, centering, or toggling visibility if no tool command matched.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuView(srcMenuName, actionSource)
@@ -2851,7 +2853,7 @@ After <SwmToken path="Modules/Actions.bas" pos="148:15:15" line-data="    If (No
 
 ---
 
-<SwmToken path="Modules/Actions.bas" pos="1305:4:4" line-data="Private Function Launch_ByName_MenuView(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuView`</SwmToken> checks for an active image, then uses a Select Case to map each command to a view action—like zoom, fit, center, toggling rulers, status bar, layer edges, smart guides, and snap options. It updates both the UI and the canvas as needed, and returns True if the command was handled.
+<SwmToken path="Modules/Actions.bas" pos="1305:4:4" line-data="Private Function Launch_ByName_MenuView(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuView`</SwmToken> handles view-related commands like zoom, centering, and toggling rulers or status bar. It checks for an active image, matches the command, and calls the right methods to update the canvas or UI. Zoom commands adjust the dropdown index, while toggles flip visibility or snapping options.
 
 ```visual basic
 Private Function Launch_ByName_MenuView(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -2964,7 +2966,7 @@ End Function
 
 ---
 
-After <SwmToken path="Modules/Actions.bas" pos="149:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuView(srcMenuName, actionSource)">`Launch_ByName_MenuView`</SwmToken>, if the command wasn't found, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> tries <SwmToken path="Modules/Actions.bas" pos="150:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuWindow(srcMenuName, actionSource)">`Launch_ByName_MenuWindow`</SwmToken> next. This makes sure window and toolbox commands are checked if view actions didn't match.
+After returning from <SwmToken path="Modules/Actions.bas" pos="149:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuView(srcMenuName, actionSource)">`Launch_ByName_MenuView`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, we call <SwmToken path="Modules/Actions.bas" pos="150:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuWindow(srcMenuName, actionSource)">`Launch_ByName_MenuWindow`</SwmToken> to see if the action name matches any window-related commands. This lets us handle UI layout changes like toggling toolboxes or navigating images if no view command matched.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuWindow(srcMenuName, actionSource)
@@ -2978,7 +2980,7 @@ After <SwmToken path="Modules/Actions.bas" pos="149:15:15" line-data="    If (No
 
 ---
 
-<SwmToken path="Modules/Actions.bas" pos="1406:4:4" line-data="Private Function Launch_ByName_MenuWindow(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuWindow`</SwmToken> uses a Select Case to map each command to a window or toolbox action—like toggling toolboxes, changing button sizes, updating image tabstrip visibility/alignment, resetting toolbox settings, or navigating between images. It returns True if the command was handled.
+<SwmToken path="Modules/Actions.bas" pos="1406:4:4" line-data="Private Function Launch_ByName_MenuWindow(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuWindow`</SwmToken> handles window-related commands, including nested ones for toolboxes and image tabstrip. It matches the command, toggles visibility, updates button sizes, or changes alignment. If nothing matches, it returns False so the caller knows the command wasn't handled.
 
 ```visual basic
 Private Function Launch_ByName_MenuWindow(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -3058,7 +3060,7 @@ End Function
 
 ---
 
-After <SwmToken path="Modules/Actions.bas" pos="150:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuWindow(srcMenuName, actionSource)">`Launch_ByName_MenuWindow`</SwmToken>, if the command wasn't found, <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken> tries <SwmToken path="Modules/Actions.bas" pos="151:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuHelp(srcMenuName, actionSource)">`Launch_ByName_MenuHelp`</SwmToken> next. This makes sure help and support commands are checked if window actions didn't match.
+After returning from <SwmToken path="Modules/Actions.bas" pos="150:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuWindow(srcMenuName, actionSource)">`Launch_ByName_MenuWindow`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="104:4:4" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`LaunchAction_ByName`</SwmToken>, we call <SwmToken path="Modules/Actions.bas" pos="151:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuHelp(srcMenuName, actionSource)">`Launch_ByName_MenuHelp`</SwmToken> to see if the action name matches any help-related commands. This gives users access to documentation, support, or update checks if no window command matched.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_MenuHelp(srcMenuName, actionSource)
@@ -3073,34 +3075,52 @@ After <SwmToken path="Modules/Actions.bas" pos="150:15:15" line-data="    If (No
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart TD
-    node1["User selects a Help menu item (srcMenuName)"] --> node2{"Is the menu item recognized?"}
+    node1["User selects Help menu item"]
     click node1 openCode "Modules/Actions.bas:1474:1478"
+    node1 --> node2{"Is menu item recognized?"}
     click node2 openCode "Modules/Actions.bas:1478:1515"
-    node2 -->|"Yes"| node3["Launch the corresponding help resource (website, dialog, or update check)"]
+    node2 -->|"Yes"| node3{"Which help resource?"}
     click node3 openCode "Modules/Actions.bas:1480:1514"
-    node2 -->|"No"| node4["Report menu item as unrecognized"]
-    click node4 openCode "Modules/Actions.bas:1515:1517"
-    node3 --> node5["Return: command found"]
-    click node5 openCode "Modules/Actions.bas:1520:1521"
-    node4 --> node6["Return: command not found"]
-    click node6 openCode "Modules/Actions.bas:1520:1521"
+    node3 -->|"Website"| node4["Open relevant website"]
+    click node4 openCode "Modules/Actions.bas:1481:1507"
+    node3 -->|"Dialog"| node5["Show relevant dialog"]
+    click node5 openCode "Modules/Actions.bas:1510:1513"
+    node3 -->|"Update check"| node6["Initiate update check"]
+    click node6 openCode "Modules/Actions.bas:1494:1495"
+    node2 -->|"No"| node7["No action taken"]
+    click node7 openCode "Modules/Actions.bas:1515:1517"
+    node4 --> node8["Return: command found"]
+    click node8 openCode "Modules/Actions.bas:1520:1521"
+    node5 --> node8
+    node6 --> node8
+    node7 --> node9["Return: command not found"]
+    click node9 openCode "Modules/Actions.bas:1520:1521"
 
 classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 %% Swimm:
 %% %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 %% flowchart TD
-%%     node1["User selects a Help menu item (<SwmToken path="Modules/Actions.bas" pos="104:8:8" line-data="Public Function LaunchAction_ByName(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu, Optional ByVal skipValidation As Boolean = False, Optional ByVal targetLayerIndex As Long = -1) As Boolean">`srcMenuName`</SwmToken>)"] --> node2{"Is the menu item recognized?"}
+%%     node1["User selects Help menu item"]
 %%     click node1 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1474:1478"
+%%     node1 --> node2{"Is menu item recognized?"}
 %%     click node2 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1478:1515"
-%%     node2 -->|"Yes"| node3["Launch the corresponding help resource (website, dialog, or update check)"]
+%%     node2 -->|"Yes"| node3{"Which help resource?"}
 %%     click node3 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1480:1514"
-%%     node2 -->|"No"| node4["Report menu item as unrecognized"]
-%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1515:1517"
-%%     node3 --> node5["Return: command found"]
-%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1520:1521"
-%%     node4 --> node6["Return: command not found"]
-%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1520:1521"
+%%     node3 -->|"Website"| node4["Open relevant website"]
+%%     click node4 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1481:1507"
+%%     node3 -->|"Dialog"| node5["Show relevant dialog"]
+%%     click node5 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1510:1513"
+%%     node3 -->|"Update check"| node6["Initiate update check"]
+%%     click node6 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1494:1495"
+%%     node2 -->|"No"| node7["No action taken"]
+%%     click node7 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1515:1517"
+%%     node4 --> node8["Return: command found"]
+%%     click node8 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1520:1521"
+%%     node5 --> node8
+%%     node6 --> node8
+%%     node7 --> node9["Return: command not found"]
+%%     click node9 openCode "<SwmPath>[Modules/Actions.bas](Modules/Actions.bas)</SwmPath>:1520:1521"
 %% 
 %% classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 ```
@@ -3109,7 +3129,7 @@ classDef HeadingStyle fill:#777777,stroke:#333,stroke-width:2px;
 
 ---
 
-In <SwmToken path="Modules/Actions.bas" pos="1474:4:4" line-data="Private Function Launch_ByName_MenuHelp(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuHelp`</SwmToken>, we use a Select Case to map each command to a help action—like opening URLs, showing dialogs, or checking for updates. For <SwmToken path="Modules/Actions.bas" pos="1489:4:4" line-data="        Case &quot;help_checkupdates&quot;">`help_checkupdates`</SwmToken>, we show a message and start an async download for the update file. If the command isn't recognized, we return False.
+In <SwmToken path="Modules/Actions.bas" pos="1474:4:4" line-data="Private Function Launch_ByName_MenuHelp(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_MenuHelp`</SwmToken>, we handle help-related commands by opening URLs for documentation, support, or donations, and by showing dialogs for about info or third-party libraries. For update checks, we show a message and start an asynchronous download so the UI doesn't freeze.
 
 ```visual basic
 Private Function Launch_ByName_MenuHelp(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -3161,7 +3181,7 @@ Private Function Launch_ByName_MenuHelp(ByRef srcMenuName As String, Optional By
 
 ---
 
-At the end of <SwmToken path="Modules/Actions.bas" pos="1520:1:1" line-data="    Launch_ByName_MenuHelp = cmdFound">`Launch_ByName_MenuHelp`</SwmToken>, we return True if the command was handled, otherwise False. This lets the caller know if it should keep searching for a handler.
+At the end of <SwmToken path="Modules/Actions.bas" pos="1520:1:1" line-data="    Launch_ByName_MenuHelp = cmdFound">`Launch_ByName_MenuHelp`</SwmToken>, we show modal dialogs for commands like <SwmToken path="Modules/Actions.bas" pos="1512:4:4" line-data="        Case &quot;help_about&quot;">`help_about`</SwmToken> and <SwmToken path="Modules/Actions.bas" pos="1509:4:4" line-data="        Case &quot;help_3rdpartylibs&quot;">`help_3rdpartylibs`</SwmToken>. This gives users direct access to info about the app or third-party libraries. If nothing matches, we return False so the caller knows the command wasn't handled.
 
 ```visual basic
             ShowPDDialog vbModal, FormAbout
@@ -3186,7 +3206,7 @@ End Function
 
 ---
 
-After <SwmToken path="Modules/Actions.bas" pos="151:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuHelp(srcMenuName, actionSource)">`Launch_ByName_MenuHelp`</SwmToken>, if the command wasn't found, <SwmToken path="Modules/Actions.bas" pos="154:1:1" line-data="    LaunchAction_ByName = cmdFound">`LaunchAction_ByName`</SwmToken> tries <SwmToken path="Modules/Actions.bas" pos="152:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_Misc(srcMenuName, actionSource)">`Launch_ByName_Misc`</SwmToken> as a last resort. This catches special-case commands like opening files or macros by path.
+After returning from <SwmToken path="Modules/Actions.bas" pos="151:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_MenuHelp(srcMenuName, actionSource)">`Launch_ByName_MenuHelp`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="154:1:1" line-data="    LaunchAction_ByName = cmdFound">`LaunchAction_ByName`</SwmToken>, we call <SwmToken path="Modules/Actions.bas" pos="152:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_Misc(srcMenuName, actionSource)">`Launch_ByName_Misc`</SwmToken> to see if the action name matches any miscellaneous commands. This lets us handle things like loading images or macros by file path if no other command matched.
 
 ```visual basic
     If (Not cmdFound) Then cmdFound = Launch_ByName_Misc(srcMenuName, actionSource)
@@ -3203,7 +3223,7 @@ After <SwmToken path="Modules/Actions.bas" pos="151:15:15" line-data="    If (No
 
 ---
 
-<SwmToken path="Modules/Actions.bas" pos="1636:4:4" line-data="Private Function Launch_ByName_Misc(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_Misc`</SwmToken> handles commands with '<SwmToken path="Modules/Actions.bas" pos="1643:20:22" line-data="    If (LCase$(Left$(srcMenuName, 11)) = &quot;image-file:&quot;) Then">`image-file`</SwmToken>:' or '<SwmToken path="Modules/Actions.bas" pos="1646:20:22" line-data="    ElseIf (LCase$(Left$(srcMenuName, 11)) = &quot;macro-file:&quot;) Then">`macro-file`</SwmToken>:' prefixes. It extracts the file path and loads the image or plays the macro if the file exists. This covers cases outside the normal menu system.
+<SwmToken path="Modules/Actions.bas" pos="1636:4:4" line-data="Private Function Launch_ByName_Misc(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean">`Launch_ByName_Misc`</SwmToken> handles commands with '<SwmToken path="Modules/Actions.bas" pos="1643:20:22" line-data="    If (LCase$(Left$(srcMenuName, 11)) = &quot;image-file:&quot;) Then">`image-file`</SwmToken>:' or '<SwmToken path="Modules/Actions.bas" pos="1646:20:22" line-data="    ElseIf (LCase$(Left$(srcMenuName, 11)) = &quot;macro-file:&quot;) Then">`macro-file`</SwmToken>:' prefixes. It extracts the file path and loads the image or plays the macro if the file exists. Macros only run if there's an active image.
 
 ```visual basic
 Private Function Launch_ByName_Misc(ByRef srcMenuName As String, Optional ByVal actionSource As PD_ActionSource = pdas_Menu) As Boolean
@@ -3234,7 +3254,7 @@ End Function
 
 ---
 
-At the end of <SwmToken path="Modules/Actions.bas" pos="165:22:22" line-data="    &#39;If (Not cmdFound) Then PDDebug.LogAction &quot;WARNING: Actions.LaunchAction_ByName received an unknown request: &quot; &amp; srcMenuName">`LaunchAction_ByName`</SwmToken>, if no command was matched, we (optionally) log a debug note. This helps catch missing or mistyped commands during development.
+After returning from <SwmToken path="Modules/Actions.bas" pos="152:15:15" line-data="    If (Not cmdFound) Then cmdFound = Launch_ByName_Misc(srcMenuName, actionSource)">`Launch_ByName_Misc`</SwmToken> in <SwmToken path="Modules/Actions.bas" pos="165:22:22" line-data="    &#39;If (Not cmdFound) Then PDDebug.LogAction &quot;WARNING: Actions.LaunchAction_ByName received an unknown request: &quot; &amp; srcMenuName">`LaunchAction_ByName`</SwmToken>, if no command matched, we can log a debug note for unknown requests. This helps during feature development to track unhandled actions, but isn't used in normal operation.
 
 ```visual basic
     'Before exiting, report a debug note if we found *no* matches.
